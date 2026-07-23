@@ -223,12 +223,33 @@
             height: 100%;
             word-wrap: break-word;
         }
-        .log-line { margin-bottom: 3px; display: block; }
+        .log-line { margin-bottom: 3px; display: block; transition: all 0.3s; }
         .log-time { color: #888; margin-right: 10px; }
         .log-type-INFO { color: var(--neon); }
         .log-type-WARN { color: #FFA500; }
         .log-type-ERR { color: #FF0033; }
         .log-type-SUCC { color: #00FFFF; }
+
+        /* Custom Highlighted Log (NEW FEATURE) */
+        .log-line.custom-highlight {
+            font-size: 18px;
+            color: #FFFFFF;
+            text-shadow: 0 0 8px #FFA500, 0 0 15px #FFA500;
+            font-weight: bold;
+            background: rgba(255, 165, 0, 0.15);
+            border-left: 4px solid #FFA500;
+            padding: 10px 12px;
+            margin: 10px 0;
+            letter-spacing: 1px;
+            box-shadow: inset 0 0 10px rgba(255, 165, 0, 0.1);
+        }
+        .log-line.custom-highlight .log-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .log-line.custom-highlight .log-type-WARN {
+            color: #FFFFFF;
+            text-shadow: 0 0 5px #FFA500;
+        }
 
         .typing-cursor {
             display: inline-block;
@@ -237,6 +258,11 @@
             background-color: var(--neon);
             animation: blink 1s step-end infinite;
             vertical-align: middle;
+        }
+        
+        .log-line.custom-highlight .typing-cursor {
+            background-color: #FFFFFF;
+            box-shadow: 0 0 8px #FFA500;
         }
 
         /* Right Panel - Analysis */
@@ -354,6 +380,92 @@
             50% { text-shadow: 0 0 20px var(--neon), 0 0 30px var(--neon); }
         }
 
+        /* =========================================
+           PREMIUM BRANDING
+           ========================================= */
+        .sys-branding {
+            position: absolute;
+            top: 35px; 
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 15, 5, 0.85);
+            border: 1px solid var(--neon-dim);
+            border-top: 2px solid var(--neon);
+            border-bottom: 2px solid var(--neon);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 20px rgba(0, 255, 102, 0.2), inset 0 0 15px rgba(0, 255, 102, 0.1);
+            padding: 15px 40px;
+            text-align: center;
+            z-index: 50; 
+            pointer-events: none; /* Let clicks pass through if logs are behind it */
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            animation: brandPulseGlow 3s infinite alternate;
+            white-space: nowrap;
+        }
+
+        /* Scanning line effect inside the box */
+        .sys-branding::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--neon);
+            opacity: 0.5;
+            box-shadow: 0 0 10px var(--neon);
+            animation: brandScan 3s linear infinite;
+        }
+
+        .brand-title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 8px;
+            text-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon);
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            animation: brandTextFlicker 6s infinite;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--neon);
+            letter-spacing: 6px;
+            text-shadow: 0 0 5px var(--neon);
+            text-transform: uppercase;
+            opacity: 0.9;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        @keyframes brandPulseGlow {
+            0% { box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 20px rgba(0, 255, 102, 0.1), inset 0 0 15px rgba(0, 255, 102, 0.05); }
+            100% { box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 35px rgba(0, 255, 102, 0.4), inset 0 0 25px rgba(0, 255, 102, 0.2); }
+        }
+
+        @keyframes brandTextFlicker {
+            0%, 19%, 21%, 100% { opacity: 1; text-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon); }
+            20% { opacity: 0.4; text-shadow: none; }
+        }
+
+        @keyframes brandScan {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        @media (max-width: 992px) {
+            .sys-branding { padding: 12px 30px; }
+            .brand-title { font-size: 22px; letter-spacing: 6px; }
+            .brand-sub { font-size: 10px; letter-spacing: 4px; }
+        }
+
+        @media (max-width: 600px) {
+            .sys-branding { padding: 10px 20px; }
+            .brand-title { font-size: 18px; letter-spacing: 4px; }
+            .brand-sub { font-size: 9px; letter-spacing: 3px; }
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             #hud-container {
@@ -435,6 +547,13 @@
                 <span>TERMINAL_ROOT@SYS</span>
                 <span id="term-status">STATUS: ACTIVE</span>
             </div>
+
+            <!-- PREMIUM BRANDING -->
+            <div class="sys-branding">
+                <div class="brand-title">Hacker Zone</div>
+                <div class="brand-sub">Powered by Siam Islam</div>
+            </div>
+
             <div class="panel-content" id="main-terminal">
                 <!-- Logs injected by JS -->
             </div>
@@ -704,9 +823,9 @@
                 isTypingCustom = true;
                 const lineText = customQueue.shift();
                 
-                // Create element for typing
+                // Create element for typing (Now with custom-highlight class)
                 const lineDiv = document.createElement('div');
-                lineDiv.className = 'log-line';
+                lineDiv.className = 'log-line custom-highlight';
                 lineDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[USR_OVR]</span> <span class="type-target"></span><span class="typing-cursor"></span>`;
                 
                 appendLog(els.terminal, lineDiv, 50);
@@ -724,10 +843,10 @@
                         targetSpan.textContent += lineText.charAt(charIdx);
                         charIdx++;
                         els.terminal.scrollTop = els.terminal.scrollHeight;
-                        setTimeout(typeChar, rand(10, 50)); // Random typing speed
+                        setTimeout(typeChar, rand(20, 60)); // Random typing speed
                     } else {
                         cursor.remove(); // remove cursor when done
-                        setTimeout(processCustomQueue, 200); // Wait before next line
+                        setTimeout(processCustomQueue, 400); // Wait before next line
                     }
                 }
                 typeChar();
