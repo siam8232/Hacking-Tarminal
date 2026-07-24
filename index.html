@@ -579,7 +579,7 @@
     <!-- CUSTOM CONTROL BOX -->
     <div id="control-box">
         <h3>INJECT PAYLOAD // COMMAND HUB</h3>
-        <textarea id="custom-input" placeholder="Commands: 'myip' | 'calc 4+7' | 'weather [city]' | 'qr [link]'... Or type normally."></textarea>
+        <textarea id="custom-input" placeholder="Commands: 'myip' | 'gps' | 'calc 4+7' | 'weather [city]' | 'qr [link]'..."></textarea>
         <div class="ctrl-btn-group">
             <button class="ctrl-btn" onclick="sys.injectCustomText()" title="Shortcut: Alt + Enter">ADD TEXT</button>
             <button class="ctrl-btn" onclick="sys.clearCustomText()" title="Shortcut: Alt + C">CLEAR</button>
@@ -751,6 +751,10 @@
                     executeApiCommand('myip', text);
                     return;
                 }
+                if (lowerText === 'gps') {
+                    executeApiCommand('gps', text);
+                    return;
+                }
                 if (lowerText.startsWith('weather ')) {
                     executeApiCommand('weather', text);
                     return;
@@ -787,14 +791,35 @@
 
                 try {
                     if (cmd === 'myip') {
-                        // Changed API to ipwho.is which is free and doesn't block frontend CORS
-                        const res = await fetch('https://ipwho.is/');
+                        // Reliable API for public IP Data
+                        const res = await fetch('https://ipinfo.io/json');
                         if(!res.ok) throw new Error("Failed to fetch IP data");
                         const data = await res.json();
-                        if(!data.success) throw new Error("Network Fetch Blocked");
                         
-                        showCommandResult(`TARGET IP: ${data.ip}<br>CITY: ${data.city}<br>REGION: ${data.region}<br>COUNTRY: ${data.country}<br>ISP: ${data.connection.isp}`);
+                        let locationStr = data.city ? `${data.city}, ${data.region}` : 'Unknown Location (ISP Routed)';
+                        showCommandResult(`TARGET IP: ${data.ip}<br>NETWORK LOC: ${locationStr}<br>COUNTRY: ${data.country}<br>ISP: ${data.org}`);
                     } 
+                    else if (cmd === 'gps') {
+                        if (!navigator.geolocation) {
+                            throw new Error("Geolocation is not supported by your browser");
+                        }
+                        
+                        showCommandResult(`[SYS_API] REQUESTING SATELLITE GPS FIX... PLEASE ALLOW PERMISSION.`, false);
+                        
+                        const pos = await new Promise((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, {timeout: 10000});
+                        });
+                        
+                        const lat = pos.coords.latitude;
+                        const lon = pos.coords.longitude;
+                        
+                        // Convert Lat/Lng to City name
+                        const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+                        const geoData = await geoRes.json();
+                        const locName = geoData.locality || geoData.city || geoData.principalSubdivision || 'Unknown';
+                        
+                        showCommandResult(`SATELLITE LOCK SECURED<br>LAT: ${lat.toFixed(4)}<br>LON: ${lon.toFixed(4)}<br>EXACT LOCATION: ${locName}, ${geoData.countryName}`);
+                    }
                     else if (cmd === 'weather') {
                         const city = fullText.substring(8).trim();
                         if(!city) throw new Error("Location empty. Syntax: weather [city/district]");
