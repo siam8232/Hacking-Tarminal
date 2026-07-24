@@ -522,15 +522,15 @@
                     <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);"></div>
                 </div>
 
-                <!-- SECRET COMMAND LIST (DISGUISED AS SYS_HOOKS) -->
+                <!-- SIMPLIFIED COMMAND LIST -->
                 <div style="margin-top:15px; border-top: 1px dashed var(--neon-dim); padding-top:10px;">
-                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px; color:#FFA500;">SYS_HOOKS //</div>
-                    <div style="font-size:10px; line-height: 1.5; color:var(--neon-dim); font-weight:bold;">
-                        <div style="display:flex; justify-content:space-between;"><span>> NET_TRACE</span><span style="color:#FFF;">[myip]</span></div>
-                        <div style="display:flex; justify-content:space-between;"><span>> SAT_LINK</span><span style="color:#FFF;">[gps]</span></div>
-                        <div style="display:flex; justify-content:space-between;"><span>> ATMOS_SCAN</span><span style="color:#FFF;">[weather loc]</span></div>
-                        <div style="display:flex; justify-content:space-between;"><span>> DATA_MATRIX</span><span style="color:#FFF;">[qr link]</span></div>
-                        <div style="display:flex; justify-content:space-between;"><span>> ALGO_COMPUTE</span><span style="color:#FFF;">[calc 2+2]</span></div>
+                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:8px; color:#FFA500;">AVAILABLE COMMANDS //</div>
+                    <div style="font-size:11px; line-height: 1.8; color:#FFF; text-shadow: 0 0 3px rgba(255,255,255,0.3);">
+                        <div><span style="color:var(--neon); font-weight:bold;">myip</span> <span style="opacity:0.7;">- Check Network IP</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">gps</span> <span style="opacity:0.7;">- Find Real Location</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">weather [city]</span> <span style="opacity:0.7;">- Live Weather</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">qr [link]</span> <span style="opacity:0.7;">- Generate QR Code</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">calc [math]</span> <span style="opacity:0.7;">- Calculator (e.g. calc 2+2)</span></div>
                     </div>
                 </div>
 
@@ -594,7 +594,7 @@
     <!-- CUSTOM CONTROL BOX -->
     <div id="control-box">
         <h3>INJECT PAYLOAD // COMMAND HUB</h3>
-        <textarea id="custom-input" placeholder="Initiate hook via L-Alt+Enter..."></textarea>
+        <textarea id="custom-input" placeholder="Initiate command via Alt+Enter..."></textarea>
         <div class="ctrl-btn-group">
             <button class="ctrl-btn" onclick="sys.injectCustomText()" title="Shortcut: Alt + Enter">ADD TEXT</button>
             <button class="ctrl-btn" onclick="sys.clearCustomText()" title="Shortcut: Alt + C">CLEAR</button>
