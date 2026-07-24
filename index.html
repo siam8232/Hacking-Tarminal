@@ -130,7 +130,10 @@
             flex-grow: 1;
             overflow: hidden;
             position: relative;
+            overflow-y: auto;
+            scrollbar-width: none;
         }
+        .panel-content::-webkit-scrollbar { display: none; }
 
         /* =========================================
            SPECIFIC SECTIONS
@@ -216,12 +219,12 @@
         #main-terminal {
             font-size: 13px;
             line-height: 1.4;
-            overflow-y: hidden;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            height: 100%;
+            min-height: 100%;
             word-wrap: break-word;
+            padding-bottom: 20px;
         }
         .log-line { margin-bottom: 3px; display: block; transition: all 0.3s; }
         .log-time { color: #888; margin-right: 10px; }
@@ -230,11 +233,11 @@
         .log-type-ERR { color: #FF0033; }
         .log-type-SUCC { color: #00FFFF; }
 
-        /* Custom Highlighted Log (NEW FEATURE) */
+        /* Custom Highlighted Log (API Command Results & Normal Text) */
         .log-line.custom-highlight {
-            font-size: 18px;
+            font-size: 15px;
             color: #FFFFFF;
-            text-shadow: 0 0 8px #FFA500, 0 0 15px #FFA500;
+            text-shadow: 0 0 8px #FFA500;
             font-weight: bold;
             background: rgba(255, 165, 0, 0.15);
             border-left: 4px solid #FFA500;
@@ -243,12 +246,22 @@
             letter-spacing: 1px;
             box-shadow: inset 0 0 10px rgba(255, 165, 0, 0.1);
         }
+        
+        .log-line.api-result {
+            border-left: 4px solid var(--neon);
+            background: rgba(0, 255, 102, 0.1);
+            text-shadow: 0 0 8px var(--neon);
+        }
+
+        .log-line.api-error {
+            border-left: 4px solid #FF0033;
+            background: rgba(255, 0, 51, 0.15);
+            text-shadow: 0 0 8px #FF0033;
+        }
+
         .log-line.custom-highlight .log-time {
             color: rgba(255, 255, 255, 0.7);
-        }
-        .log-line.custom-highlight .log-type-WARN {
-            color: #FFFFFF;
-            text-shadow: 0 0 5px #FFA500;
+            font-size: 12px;
         }
 
         .typing-cursor {
@@ -259,7 +272,6 @@
             animation: blink 1s step-end infinite;
             vertical-align: middle;
         }
-        
         .log-line.custom-highlight .typing-cursor {
             background-color: #FFFFFF;
             box-shadow: 0 0 8px #FFA500;
@@ -396,14 +408,13 @@
             padding: 15px 40px;
             text-align: center;
             z-index: 50; 
-            pointer-events: none; /* Let clicks pass through if logs are behind it */
+            pointer-events: none; 
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
             animation: brandPulseGlow 3s infinite alternate;
             white-space: nowrap;
         }
 
-        /* Scanning line effect inside the box */
         .sys-branding::after {
             content: '';
             position: absolute;
@@ -454,30 +465,10 @@
             100% { top: 100%; opacity: 0; }
         }
 
-        @media (max-width: 992px) {
-            .sys-branding { padding: 12px 30px; }
-            .brand-title { font-size: 22px; letter-spacing: 6px; }
-            .brand-sub { font-size: 10px; letter-spacing: 4px; }
-        }
-
-        @media (max-width: 600px) {
-            .sys-branding { padding: 10px 20px; }
-            .brand-title { font-size: 18px; letter-spacing: 4px; }
-            .brand-sub { font-size: 9px; letter-spacing: 3px; }
-        }
-
         /* Responsive */
-        @media (max-width: 1200px) {
-            #hud-container {
-                grid-template-columns: 250px 1fr 250px;
-            }
-        }
+        @media (max-width: 1200px) { #hud-container { grid-template-columns: 250px 1fr 250px; } }
         @media (max-width: 992px) {
-            #hud-container {
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: auto auto auto auto;
-                overflow-y: auto;
-            }
+            #hud-container { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto auto; overflow-y: auto; }
             header { grid-column: 1 / -1; }
             #left-panel { grid-column: 1 / 2; }
             #right-panel { grid-column: 2 / 3; }
@@ -486,11 +477,7 @@
             #control-box { bottom: 10px; right: 10px; width: 280px; }
         }
         @media (max-width: 600px) {
-            #hud-container {
-                grid-template-columns: 1fr;
-                display: flex;
-                flex-direction: column;
-            }
+            #hud-container { grid-template-columns: 1fr; display: flex; flex-direction: column; }
             .panel { min-height: 300px; }
             #control-box { position: static; width: 100%; margin-top: 20px; }
         }
@@ -523,20 +510,14 @@
         <aside class="panel" id="left-panel">
             <div class="panel-header">SYS_RESOURCES</div>
             <div class="panel-content">
-                <div id="stat-gauges">
-                    <!-- Populated by JS -->
-                </div>
-                
+                <div id="stat-gauges"></div>
                 <div class="circular-indicators">
                     <canvas id="fan1" class="circle-canvas"></canvas>
                     <canvas id="fan2" class="circle-canvas"></canvas>
                 </div>
-
                 <div style="margin-top:20px;">
                     <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px;">LIVE DATA</div>
-                    <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);">
-                        <!-- Populated by JS -->
-                    </div>
+                    <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);"></div>
                 </div>
             </div>
         </aside>
@@ -568,9 +549,7 @@
                 
                 <div style="margin-top: 15px;">
                     <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px;">MEM_DUMP</div>
-                    <div class="hex-dump" id="hex-dump-container">
-                        <!-- Populated by JS -->
-                    </div>
+                    <div class="hex-dump" id="hex-dump-container"></div>
                 </div>
             </div>
         </aside>
@@ -591,9 +570,7 @@
             </div>
             <div class="panel">
                 <div class="panel-header">ACTIVITY_STATUS</div>
-                <div class="panel-content" id="activity-logs" style="font-size: 11px; line-height: 1.5; overflow: hidden;">
-                    <!-- Populated by JS -->
-                </div>
+                <div class="panel-content" id="activity-logs" style="font-size: 11px; line-height: 1.5; overflow: hidden;"></div>
             </div>
         </footer>
 
@@ -601,8 +578,8 @@
 
     <!-- CUSTOM CONTROL BOX -->
     <div id="control-box">
-        <h3>INJECT PAYLOAD // MANUAL OVERRIDE</h3>
-        <textarea id="custom-input" placeholder="Enter custom log data here..."></textarea>
+        <h3>INJECT PAYLOAD // COMMAND HUB</h3>
+        <textarea id="custom-input" placeholder="Commands: 'myip' | 'weather [city]' | 'qr [link]'... Or just type text."></textarea>
         <div class="ctrl-btn-group">
             <button class="ctrl-btn" onclick="sys.injectCustomText()" title="Shortcut: Alt + Enter">ADD TEXT</button>
             <button class="ctrl-btn" onclick="sys.clearCustomText()" title="Shortcut: Alt + C">CLEAR</button>
@@ -613,10 +590,6 @@
 
     <!-- MAIN JAVASCRIPT -->
     <script>
-        /**
-         * SEC-NET HUD SYSTEM CORE
-         * Handles all logic, animations, and data generation for the terminal.
-         */
         const sys = (function() {
             // State
             let isPaused = false;
@@ -626,6 +599,7 @@
             // DOM Elements
             const els = {
                 terminal: document.getElementById('main-terminal'),
+                terminalContent: document.querySelector('#center-panel .panel-content'),
                 activity: document.getElementById('activity-logs'),
                 statGauges: document.getElementById('stat-gauges'),
                 liveData: document.getElementById('live-data-list'),
@@ -636,7 +610,6 @@
                 clock: document.getElementById('clock-display')
             };
 
-            // Canvas Contexts
             const ctx = {
                 headerWave: initCanvas('header-wave'),
                 fan1: initCanvas('fan1'),
@@ -646,38 +619,22 @@
                 wave2: initCanvas('wave2')
             };
 
-            // Data Configurations
             const stats = [
                 { id: 'CPU', val: 0 }, { id: 'MEM', val: 0 }, 
-                { id: 'GPU', val: 0 }, { id: 'SSD', val: 0 },
-                { id: 'NET', val: 0 }
+                { id: 'GPU', val: 0 }, { id: 'SSD', val: 0 }, { id: 'NET', val: 0 }
             ];
 
-            const liveMetrics = [
-                'TEMP', 'VOLT', 'FPS', 'PING', 'UPLINK', 'DWNLINK', 'FIREWALL', 'AI_ACC'
-            ];
-
+            const liveMetrics = ['TEMP', 'VOLT', 'FPS', 'PING', 'UPLINK', 'DWNLINK', 'FIREWALL', 'AI_ACC'];
             const logTypes = ['INFO', 'WARN', 'ERR', 'SUCC'];
             const logMessages = [
-                "INITIALIZING KERNEL MODULES...",
-                "SCANNING PORT RANGE 0-65535",
-                "AUTHENTICATING SECURE HANDSHAKE",
-                "ACCESS GRANTED - ROOT PRIVILEGES",
-                "ACCESS DENIED - RETRYING...",
-                "PACKET RECEIVED FROM UNKNOWN SOURCE",
-                "ENCRYPTING DATA STREAM [AES-256]",
-                "DECRYPTING PAYLOAD...",
-                "LOADING AI NEURAL NET MODULE",
-                "FIREWALL ENABLED - STRICT MODE",
-                "THREAD CREATED - ID:",
-                "LISTENING ON PORT",
-                "SYSTEM READY",
-                "BYPASSING PROXY SERVER",
-                "INJECTING SQL PAYLOAD",
-                "EXTRACTING USER HASHES"
+                "INITIALIZING KERNEL MODULES...", "SCANNING PORT RANGE 0-65535",
+                "AUTHENTICATING SECURE HANDSHAKE", "ACCESS GRANTED - ROOT PRIVILEGES",
+                "ACCESS DENIED - RETRYING...", "PACKET RECEIVED FROM UNKNOWN SOURCE",
+                "ENCRYPTING DATA STREAM [AES-256]", "DECRYPTING PAYLOAD...",
+                "LOADING AI NEURAL NET MODULE", "FIREWALL ENABLED - STRICT MODE",
+                "THREAD CREATED - ID:", "LISTENING ON PORT", "SYSTEM READY"
             ];
 
-            // Utilities
             function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
             function randFloat(min, max) { return Math.random() * (max - min) + min; }
             function rHex(len=4) { return Math.floor(Math.random()*Math.pow(16,len)).toString(16).toUpperCase().padStart(len,'0'); }
@@ -691,7 +648,6 @@
             function initCanvas(id) {
                 const cvs = document.getElementById(id);
                 if(!cvs) return null;
-                // Handle high DPI displays
                 const rect = cvs.getBoundingClientRect();
                 cvs.width = rect.width * (window.devicePixelRatio || 1);
                 cvs.height = rect.height * (window.devicePixelRatio || 1);
@@ -712,59 +668,39 @@
                 });
             });
 
-            // ==========================================
-            // FULLSCREEN LOGIC
-            // ==========================================
             function toggleFullscreen() {
                 const elem = document.documentElement;
                 if (!document.fullscreenElement) {
-                    if (elem.requestFullscreen) { elem.requestFullscreen(); }
-                    else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
-                    else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+                    if (elem.requestFullscreen) elem.requestFullscreen();
+                    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+                    else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
                 }
             }
 
             function exitFullscreen() {
                 if (document.fullscreenElement) {
-                    if (document.exitFullscreen) { document.exitFullscreen(); }
-                    else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
-                    else if (document.msExitFullscreen) { document.msExitFullscreen(); }
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                    else if (document.msExitFullscreen) document.msExitFullscreen();
                 }
             }
 
-            // prevent exiting fullscreen on random clicks
             document.addEventListener('click', (e) => {
-                // native fullscreen doesn't exit on click anyway, but ensure focus is kept
                 if (document.fullscreenElement && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'TEXTAREA') {
                     e.preventDefault();
                 }
             });
 
-            // ==========================================
-            // KEYBOARD SHORTCUTS LOGIC (NEW FEATURE)
-            // ==========================================
+            // KEYBOARD SHORTCUTS
             document.addEventListener('keydown', (e) => {
-                // Check if the Alt key is being held down
                 if (e.altKey) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault(); // Prevents adding a new line in textarea
-                        injectCustomText();
-                    } else if (e.key.toLowerCase() === 'c') {
-                        e.preventDefault();
-                        clearCustomText();
-                    } else if (e.key.toLowerCase() === 'p') {
-                        e.preventDefault();
-                        togglePause();
-                    } else if (e.key.toLowerCase() === 's') {
-                        e.preventDefault();
-                        clearTerminal();
-                    }
+                    if (e.key === 'Enter') { e.preventDefault(); injectCustomText(); }
+                    else if (e.key.toLowerCase() === 'c') { e.preventDefault(); clearCustomText(); }
+                    else if (e.key.toLowerCase() === 'p') { e.preventDefault(); togglePause(); }
+                    else if (e.key.toLowerCase() === 's') { e.preventDefault(); clearTerminal(); }
                 }
             });
 
-            // ==========================================
-            // TERMINAL & LOGS LOGIC
-            // ==========================================
             function createLogLine(text, type = 'INFO') {
                 const div = document.createElement('div');
                 div.className = 'log-line';
@@ -777,25 +713,21 @@
                 while (target.childNodes.length > maxLines) {
                     target.removeChild(target.firstChild);
                 }
-                target.scrollTop = target.scrollHeight;
+                if (target === els.terminal) els.terminalContent.scrollTop = els.terminalContent.scrollHeight;
+                else target.scrollTop = target.scrollHeight;
             }
 
             function generateRandomLog() {
                 if (isPaused || isTypingCustom) return;
-                
                 const type = logTypes[rand(0, logTypes.length - 1)];
                 let msg = logMessages[rand(0, logMessages.length - 1)];
-                
-                // Append random data
                 const rndData = rand(0,5);
                 if(rndData===0) msg += ` ${rIP()}`;
                 if(rndData===1) msg += ` ${rMAC()}`;
                 if(rndData===2) msg += ` ${rand(1000,9999)}`;
                 if(rndData===3) msg += ` 0x${rHex(8)}`;
-
                 appendLog(els.terminal, createLogLine(msg, type), 50);
 
-                // Activity logs (Bottom panel)
                 if (rand(0,10) > 6) {
                     const actLine = document.createElement('div');
                     actLine.textContent = `> TRK_${rHex(4)}: ${rIP()} : ${rHex(8)} : OK`;
@@ -804,48 +736,107 @@
             }
 
             // ==========================================
-            // CUSTOM TEXT INJECTION (TYPING EFFECT)
+            // API COMMAND LOGIC & CUSTOM TEXT
             // ==========================================
             function injectCustomText() {
                 const text = els.customInput.value.trim();
                 if (!text) return;
                 
-                // Split by newlines and add to queue
+                els.customInput.value = '';
+                
+                const lowerText = text.toLowerCase();
+                
+                // COMMAND CHECKS
+                if (lowerText === 'myip') {
+                    executeApiCommand('myip', text);
+                    return;
+                }
+                if (lowerText.startsWith('weather ')) {
+                    executeApiCommand('weather', text);
+                    return;
+                }
+                if (lowerText.startsWith('qr ')) {
+                    executeApiCommand('qr', text);
+                    return;
+                }
+
+                // IF NO COMMAND, PROCESS AS REGULAR TYPING EFFECT
                 const lines = text.split('\n');
                 lines.forEach(line => {
                     if(line.trim() !== '') customQueue.push(line);
                 });
                 
-                els.customInput.value = '';
                 if (!isTypingCustom) processCustomQueue();
             }
 
-            function clearCustomText() {
-                els.customInput.value = '';
+            // Execute Real APIs
+            async function executeApiCommand(cmd, fullText) {
+                isTypingCustom = true; // Pause random logs while fetching
+
+                // Show processing log
+                const initDiv = document.createElement('div');
+                initDiv.className = 'log-line custom-highlight';
+                initDiv.style.borderLeftColor = 'var(--neon)';
+                initDiv.style.background = 'transparent';
+                initDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[SYS_API]</span> INITIATING MODULE: ${cmd.toUpperCase()}...`;
+                appendLog(els.terminal, initDiv, 50);
+
+                try {
+                    if (cmd === 'myip') {
+                        const res = await fetch('https://ipapi.co/json/');
+                        if(!res.ok) throw new Error("Failed to fetch IP data");
+                        const data = await res.json();
+                        showCommandResult(`TARGET IP: ${data.ip}<br>CITY: ${data.city}<br>REGION: ${data.region}<br>COUNTRY: ${data.country_name}<br>ISP: ${data.org}`);
+                    } 
+                    else if (cmd === 'weather') {
+                        const city = fullText.substring(8).trim();
+                        if(!city) throw new Error("Location empty. Syntax: weather [city/district]");
+                        
+                        // Fetch lat/lon first (Geocoding API)
+                        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+                        const geoData = await geoRes.json();
+                        if(!geoData.results || geoData.results.length === 0) throw new Error(`Location '${city}' not found.`);
+                        
+                        const {latitude, longitude, name, country} = geoData.results[0];
+                        
+                        // Fetch actual weather using lat/lon
+                        const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                        const wData = await wRes.json();
+                        
+                        showCommandResult(`LOCATION: ${name}, ${country}<br>STATUS: ACTIVE<br>TEMP: ${wData.current_weather.temperature}°C<br>WIND: ${wData.current_weather.windspeed} km/h`);
+                    }
+                    else if (cmd === 'qr') {
+                        const link = fullText.substring(3).trim();
+                        if(!link) throw new Error("Link empty. Syntax: qr [url/text]");
+                        
+                        // Direct image link via API
+                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link)}&color=00FF66&bgcolor=000502`;
+                        
+                        showCommandResult(`QR CODE GENERATED FOR: ${link}<br><img src="${qrUrl}" style="margin-top:10px; border:2px solid var(--neon); padding:5px; box-shadow:0 0 15px rgba(0,255,102,0.5);">`);
+                    }
+                } catch(err) {
+                    showCommandResult(`ERROR: ${err.message}`, true);
+                }
+                
+                isTypingCustom = false; // Resume normal logs
             }
 
-            function clearTerminal() {
-                els.terminal.innerHTML = '';
-                els.activity.innerHTML = '';
-                appendLog(els.terminal, createLogLine("SYSTEM LOGS WIPED", "WARN"));
+            function showCommandResult(htmlContent, isError = false) {
+                const resDiv = document.createElement('div');
+                resDiv.className = `log-line custom-highlight ${isError ? 'api-error' : 'api-result'}`;
+                resDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-${isError?'ERR':'SUCC'}">[${isError?'FAILED':'SUCCESS'}]</span> <br><div style="margin-top:5px; line-height: 1.6;">${htmlContent}</div>`;
+                appendLog(els.terminal, resDiv, 50);
             }
 
-            function togglePause() {
-                isPaused = !isPaused;
-                els.btnPause.textContent = isPaused ? 'RESUME' : 'PAUSE';
-                els.btnPause.classList.toggle('active', isPaused);
-            }
-
+            // Normal typing effect
             function processCustomQueue() {
                 if (customQueue.length === 0 || isPaused) {
                     isTypingCustom = false;
                     return;
                 }
-                
                 isTypingCustom = true;
                 const lineText = customQueue.shift();
                 
-                // Create element for typing (Now with custom-highlight class)
                 const lineDiv = document.createElement('div');
                 lineDiv.className = 'log-line custom-highlight';
                 lineDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[USR_OVR]</span> <span class="type-target"></span><span class="typing-cursor"></span>`;
@@ -857,34 +848,37 @@
                 let charIdx = 0;
 
                 function typeChar() {
-                    if (isPaused) {
-                        setTimeout(typeChar, 100);
-                        return;
-                    }
+                    if (isPaused) { setTimeout(typeChar, 100); return; }
                     if (charIdx < lineText.length) {
                         targetSpan.textContent += lineText.charAt(charIdx);
                         charIdx++;
-                        els.terminal.scrollTop = els.terminal.scrollHeight;
-                        setTimeout(typeChar, rand(20, 60)); // Random typing speed
+                        els.terminalContent.scrollTop = els.terminalContent.scrollHeight;
+                        setTimeout(typeChar, rand(20, 60)); 
                     } else {
-                        cursor.remove(); // remove cursor when done
-                        setTimeout(processCustomQueue, 400); // Wait before next line
+                        cursor.remove(); 
+                        setTimeout(processCustomQueue, 400); 
                     }
                 }
                 typeChar();
             }
 
-            // ==========================================
-            // DOM UPDATERS (Stats, Hex, Live)
-            // ==========================================
+            function clearCustomText() { els.customInput.value = ''; }
+            function clearTerminal() {
+                els.terminal.innerHTML = '';
+                els.activity.innerHTML = '';
+                appendLog(els.terminal, createLogLine("SYSTEM LOGS WIPED", "WARN"));
+            }
+            function togglePause() {
+                isPaused = !isPaused;
+                els.btnPause.textContent = isPaused ? 'RESUME' : 'PAUSE';
+                els.btnPause.classList.toggle('active', isPaused);
+            }
+
             function initDOM() {
-                // Init Stat Gauges
                 els.statGauges.innerHTML = stats.map(s => `
                     <div class="stat-row">
                         <div class="stat-label">${s.id}</div>
-                        <div class="stat-bar-container">
-                            <div class="stat-bar" id="bar-${s.id}"></div>
-                        </div>
+                        <div class="stat-bar-container"><div class="stat-bar" id="bar-${s.id}"></div></div>
                         <div class="stat-val" id="val-${s.id}">0%</div>
                     </div>
                 `).join('');
@@ -892,19 +886,14 @@
 
             function updateDOMStats() {
                 if(isPaused) return;
-
-                // Update Left Bars
                 stats.forEach(s => {
-                    // Smooth random walk
                     s.val += randFloat(-5, 5);
                     if (s.val > 100) s.val = 100;
                     if (s.val < 0) s.val = 0;
-                    
                     document.getElementById(`bar-${s.id}`).style.width = `${s.val}%`;
                     document.getElementById(`val-${s.id}`).textContent = `${s.val.toFixed(1)}%`;
                 });
 
-                // Update Live Data list
                 let liveHTML = '';
                 liveMetrics.forEach(m => {
                     const val = (m === 'PING' || m === 'FPS' || m === 'TEMP') ? rand(20, 99) : 
@@ -913,199 +902,85 @@
                 });
                 els.liveData.innerHTML = liveHTML;
 
-                // Update Hex Dump
                 let hexLines = '';
-                for(let i=0; i<8; i++) {
-                    hexLines += `0x${rHex(4)}  ${rHex(4)} ${rHex(4)} ${rHex(4)} ${rHex(4)}<br>`;
-                }
+                for(let i=0; i<8; i++) hexLines += `0x${rHex(4)}  ${rHex(4)} ${rHex(4)} ${rHex(4)} ${rHex(4)}<br>`;
                 els.hexDump.innerHTML = hexLines;
 
-                // Random Threat level change
                 if(rand(0,100) > 95) {
                     const threats = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
                     const t = threats[rand(0,3)];
                     els.threat.textContent = `THREAT: ${t}`;
                     els.threat.style.color = (t === 'CRITICAL' || t === 'HIGH') ? '#FF0033' : 'var(--neon)';
                 }
-
-                // Update Clock
-                const now = new Date();
-                els.clock.textContent = now.toLocaleTimeString();
+                els.clock.textContent = new Date().toLocaleTimeString();
             }
 
-
-            // ==========================================
-            // CANVAS ANIMATIONS
-            // ==========================================
             let time = 0;
-
             function drawRadar(c) {
-                if(!c) return;
-                const {ctx, w, h} = c;
-                const cx = w/2, cy = h/2;
-                const r = Math.min(w,h)/2 - 5;
-
-                // Fade trail
-                ctx.fillStyle = 'rgba(0, 5, 2, 0.1)';
-                ctx.fillRect(0, 0, w, h);
-
-                // Grid circles
-                ctx.strokeStyle = 'rgba(0, 255, 102, 0.3)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                for(let i=1; i<=4; i++) {
-                    ctx.arc(cx, cy, r*(i/4), 0, Math.PI*2);
-                }
-                // Crosshairs
-                ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
-                ctx.moveTo(0, cy); ctx.lineTo(w, cy);
-                ctx.stroke();
-
-                // Sweep
-                const angle = time * 2;
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(angle);
-                ctx.beginPath();
-                ctx.moveTo(0,0);
-                ctx.arc(0, 0, r, 0, 0.2);
-                ctx.lineTo(0,0);
-                ctx.fillStyle = 'rgba(0, 255, 102, 0.5)';
-                ctx.fill();
-                ctx.restore();
-
-                // Random blips
+                if(!c) return; const {ctx, w, h} = c; const cx = w/2, cy = h/2; const r = Math.min(w,h)/2 - 5;
+                ctx.fillStyle = 'rgba(0, 5, 2, 0.1)'; ctx.fillRect(0, 0, w, h);
+                ctx.strokeStyle = 'rgba(0, 255, 102, 0.3)'; ctx.lineWidth = 1;
+                ctx.beginPath(); for(let i=1; i<=4; i++) ctx.arc(cx, cy, r*(i/4), 0, Math.PI*2);
+                ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+                const angle = time * 2; ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0, 0, r, 0, 0.2); ctx.lineTo(0,0);
+                ctx.fillStyle = 'rgba(0, 255, 102, 0.5)'; ctx.fill(); ctx.restore();
                 if(rand(0,10) > 8) {
                     const bx = cx + Math.cos(randFloat(0, Math.PI*2)) * randFloat(0, r);
                     const by = cy + Math.sin(randFloat(0, Math.PI*2)) * randFloat(0, r);
-                    ctx.fillStyle = '#00FF66';
-                    ctx.beginPath();
-                    ctx.arc(bx, by, 3, 0, Math.PI*2);
-                    ctx.fill();
+                    ctx.fillStyle = '#00FF66'; ctx.beginPath(); ctx.arc(bx, by, 3, 0, Math.PI*2); ctx.fill();
                 }
             }
 
             function drawWaveform(c, freq, amp, speed, offset) {
-                if(!c) return;
-                const {ctx, w, h} = c;
-                ctx.clearRect(0, 0, w, h);
-                ctx.strokeStyle = '#00FF66';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                
-                const mid = h/2;
+                if(!c) return; const {ctx, w, h} = c; ctx.clearRect(0, 0, w, h);
+                ctx.strokeStyle = '#00FF66'; ctx.lineWidth = 1.5; ctx.beginPath(); const mid = h/2;
                 for(let x=0; x<w; x+=2) {
-                    // Combine sine waves and noise
                     let y = Math.sin(x * freq + time * speed + offset) * amp;
                     y += Math.sin(x * freq*2 + time * speed*1.5) * (amp/2);
-                    y += (Math.random()-0.5) * 5; // Noise
-                    
-                    if(x===0) ctx.moveTo(x, mid + y);
-                    else ctx.lineTo(x, mid + y);
-                }
-                ctx.stroke();
+                    y += (Math.random()-0.5) * 5;
+                    if(x===0) ctx.moveTo(x, mid + y); else ctx.lineTo(x, mid + y);
+                } ctx.stroke();
             }
 
             function drawFan(c, offset) {
-                if(!c) return;
-                const {ctx, w, h} = c;
-                const cx = w/2, cy = h/2;
-                const r = Math.min(w,h)/2 - 2;
-
-                ctx.clearRect(0,0,w,h);
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(time * 3 + offset);
-
-                ctx.strokeStyle = '#00FF66';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(0, 0, r, 0, Math.PI*2);
-                ctx.stroke();
-
+                if(!c) return; const {ctx, w, h} = c; const cx = w/2, cy = h/2; const r = Math.min(w,h)/2 - 2;
+                ctx.clearRect(0,0,w,h); ctx.save(); ctx.translate(cx, cy); ctx.rotate(time * 3 + offset);
+                ctx.strokeStyle = '#00FF66'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.stroke();
                 ctx.fillStyle = 'rgba(0, 255, 102, 0.2)';
                 for(let i=0; i<3; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(0,0);
-                    ctx.arc(0, 0, r, i*(Math.PI*2/3), i*(Math.PI*2/3) + Math.PI/3);
-                    ctx.lineTo(0,0);
-                    ctx.fill();
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0,0);
+                    ctx.arc(0, 0, r, i*(Math.PI*2/3), i*(Math.PI*2/3) + Math.PI/3); ctx.lineTo(0,0);
+                    ctx.fill(); ctx.stroke();
                 }
-
-                ctx.beginPath();
-                ctx.arc(0,0, r/4, 0, Math.PI*2);
-                ctx.fillStyle = '#00FF66';
-                ctx.fill();
-                
-                ctx.restore();
+                ctx.beginPath(); ctx.arc(0,0, r/4, 0, Math.PI*2); ctx.fillStyle = '#00FF66'; ctx.fill(); ctx.restore();
             }
 
             function drawHeaderWave(c) {
-                if(!c) return;
-                const {ctx, w, h} = c;
-                ctx.clearRect(0,0,w,h);
-                ctx.fillStyle = '#00FF66';
-                const bars = 20;
-                const bw = w/bars - 2;
+                if(!c) return; const {ctx, w, h} = c; ctx.clearRect(0,0,w,h); ctx.fillStyle = '#00FF66';
+                const bars = 20; const bw = w/bars - 2;
                 for(let i=0; i<bars; i++) {
                     const bh = (Math.sin(time*5 + i*0.5) * 0.5 + 0.5) * h;
                     ctx.fillRect(i*(bw+2), h-bh, bw, bh);
                 }
             }
 
-
-            // ==========================================
-            // MAIN LOOP
-            // ==========================================
-            let lastLogTime = 0;
-            let lastStatTime = 0;
-
+            let lastLogTime = 0, lastStatTime = 0;
             function loop(timestamp) {
                 if(!isPaused) {
                     time += 0.02;
-
-                    // Draw Canvases
-                    drawRadar(ctx.radar);
-                    drawWaveform(ctx.wave1, 0.02, ctx.wave1?.h/4 || 20, 2, 0);
+                    drawRadar(ctx.radar); drawWaveform(ctx.wave1, 0.02, ctx.wave1?.h/4 || 20, 2, 0);
                     drawWaveform(ctx.wave2, 0.05, ctx.wave2?.h/3 || 30, -3, Math.PI);
-                    drawFan(ctx.fan1, 0);
-                    drawFan(ctx.fan2, Math.PI);
-                    drawHeaderWave(ctx.headerWave);
-
-                    // Throttle DOM updates
-                    if (timestamp - lastLogTime > 150) {
-                        generateRandomLog();
-                        lastLogTime = timestamp;
-                    }
-
-                    if (timestamp - lastStatTime > 1000) {
-                        updateDOMStats();
-                        lastStatTime = timestamp;
-                    }
-                } else if(isTypingCustom && customQueue.length > 0 && !isPaused) {
-                     // If paused but we initiated custom text before pause, it halts. 
-                     // Logic is handled in typeChar().
+                    drawFan(ctx.fan1, 0); drawFan(ctx.fan2, Math.PI); drawHeaderWave(ctx.headerWave);
+                    if (timestamp - lastLogTime > 150) { generateRandomLog(); lastLogTime = timestamp; }
+                    if (timestamp - lastStatTime > 1000) { updateDOMStats(); lastStatTime = timestamp; }
                 }
-
                 requestAnimationFrame(loop);
             }
 
-            // Init
-            initDOM();
-            updateDOMStats();
-            requestAnimationFrame(loop);
+            initDOM(); updateDOMStats(); requestAnimationFrame(loop);
 
-            // Expose public API
-            return {
-                toggleFullscreen,
-                exitFullscreen,
-                injectCustomText,
-                clearCustomText,
-                clearTerminal,
-                togglePause
-            };
-
+            return { toggleFullscreen, exitFullscreen, injectCustomText, clearCustomText, clearTerminal, togglePause };
         })();
     </script>
 </body>
