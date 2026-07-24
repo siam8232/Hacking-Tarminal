@@ -604,10 +604,10 @@
         <h3>INJECT PAYLOAD // MANUAL OVERRIDE</h3>
         <textarea id="custom-input" placeholder="Enter custom log data here..."></textarea>
         <div class="ctrl-btn-group">
-            <button class="ctrl-btn" onclick="sys.injectCustomText()">ADD TEXT</button>
-            <button class="ctrl-btn" onclick="sys.clearCustomText()">CLEAR</button>
-            <button class="ctrl-btn" id="btn-pause" onclick="sys.togglePause()">PAUSE</button>
-            <button class="ctrl-btn" onclick="sys.clearTerminal()">WIPE LOGS</button>
+            <button class="ctrl-btn" onclick="sys.injectCustomText()" title="Shortcut: Alt + Enter">ADD TEXT</button>
+            <button class="ctrl-btn" onclick="sys.clearCustomText()" title="Shortcut: Alt + C">CLEAR</button>
+            <button class="ctrl-btn" id="btn-pause" onclick="sys.togglePause()" title="Shortcut: Alt + P">PAUSE</button>
+            <button class="ctrl-btn" onclick="sys.clearTerminal()" title="Shortcut: Alt + S">WIPE LOGS</button>
         </div>
     </div>
 
@@ -737,6 +737,28 @@
                 // native fullscreen doesn't exit on click anyway, but ensure focus is kept
                 if (document.fullscreenElement && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'TEXTAREA') {
                     e.preventDefault();
+                }
+            });
+
+            // ==========================================
+            // KEYBOARD SHORTCUTS LOGIC (NEW FEATURE)
+            // ==========================================
+            document.addEventListener('keydown', (e) => {
+                // Check if the Alt key is being held down
+                if (e.altKey) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); // Prevents adding a new line in textarea
+                        injectCustomText();
+                    } else if (e.key.toLowerCase() === 'c') {
+                        e.preventDefault();
+                        clearCustomText();
+                    } else if (e.key.toLowerCase() === 'p') {
+                        e.preventDefault();
+                        togglePause();
+                    } else if (e.key.toLowerCase() === 's') {
+                        e.preventDefault();
+                        clearTerminal();
+                    }
                 }
             });
 
