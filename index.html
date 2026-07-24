@@ -506,7 +506,7 @@
             </div>
         </header>
 
-        <!-- LEFT PANEL : SYSTEM STATS -->
+        <!-- LEFT PANEL : SYSTEM STATS & SECRET COMMANDS -->
         <aside class="panel" id="left-panel">
             <div class="panel-header">SYS_RESOURCES</div>
             <div class="panel-content">
@@ -515,10 +515,25 @@
                     <canvas id="fan1" class="circle-canvas"></canvas>
                     <canvas id="fan2" class="circle-canvas"></canvas>
                 </div>
-                <div style="margin-top:20px;">
+                
+                <!-- LIVE DATA -->
+                <div style="margin-top:15px;">
                     <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px;">LIVE DATA</div>
                     <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);"></div>
                 </div>
+
+                <!-- SECRET COMMAND LIST (DISGUISED AS SYS_HOOKS) -->
+                <div style="margin-top:15px; border-top: 1px dashed var(--neon-dim); padding-top:10px;">
+                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px; color:#FFA500;">SYS_HOOKS //</div>
+                    <div style="font-size:10px; line-height: 1.5; color:var(--neon-dim); font-weight:bold;">
+                        <div style="display:flex; justify-content:space-between;"><span>> NET_TRACE</span><span style="color:#FFF;">[myip]</span></div>
+                        <div style="display:flex; justify-content:space-between;"><span>> SAT_LINK</span><span style="color:#FFF;">[gps]</span></div>
+                        <div style="display:flex; justify-content:space-between;"><span>> ATMOS_SCAN</span><span style="color:#FFF;">[weather loc]</span></div>
+                        <div style="display:flex; justify-content:space-between;"><span>> DATA_MATRIX</span><span style="color:#FFF;">[qr link]</span></div>
+                        <div style="display:flex; justify-content:space-between;"><span>> ALGO_COMPUTE</span><span style="color:#FFF;">[calc 2+2]</span></div>
+                    </div>
+                </div>
+
             </div>
         </aside>
 
@@ -579,7 +594,7 @@
     <!-- CUSTOM CONTROL BOX -->
     <div id="control-box">
         <h3>INJECT PAYLOAD // COMMAND HUB</h3>
-        <textarea id="custom-input" placeholder="Commands: 'myip' | 'gps' | 'calc 4+7' | 'weather [city]' | 'qr [link]'..."></textarea>
+        <textarea id="custom-input" placeholder="Initiate hook via L-Alt+Enter..."></textarea>
         <div class="ctrl-btn-group">
             <button class="ctrl-btn" onclick="sys.injectCustomText()" title="Shortcut: Alt + Enter">ADD TEXT</button>
             <button class="ctrl-btn" onclick="sys.clearCustomText()" title="Shortcut: Alt + C">CLEAR</button>
@@ -624,7 +639,9 @@
                 { id: 'GPU', val: 0 }, { id: 'SSD', val: 0 }, { id: 'NET', val: 0 }
             ];
 
-            const liveMetrics = ['TEMP', 'VOLT', 'FPS', 'PING', 'UPLINK', 'DWNLINK', 'FIREWALL', 'AI_ACC'];
+            // Reduced liveMetrics slightly to make room for SYS_HOOKS list beautifully
+            const liveMetrics = ['TEMP', 'VOLT', 'FPS', 'PING', 'UPLINK', 'DWNLINK'];
+            
             const logTypes = ['INFO', 'WARN', 'ERR', 'SUCC'];
             const logMessages = [
                 "INITIALIZING KERNEL MODULES...", "SCANNING PORT RANGE 0-65535",
@@ -747,26 +764,11 @@
                 const lowerText = text.toLowerCase();
                 
                 // COMMAND CHECKS
-                if (lowerText === 'myip') {
-                    executeApiCommand('myip', text);
-                    return;
-                }
-                if (lowerText === 'gps') {
-                    executeApiCommand('gps', text);
-                    return;
-                }
-                if (lowerText.startsWith('weather ')) {
-                    executeApiCommand('weather', text);
-                    return;
-                }
-                if (lowerText.startsWith('qr ')) {
-                    executeApiCommand('qr', text);
-                    return;
-                }
-                if (lowerText.startsWith('calc ')) {
-                    executeApiCommand('calc', text);
-                    return;
-                }
+                if (lowerText === 'myip') { executeApiCommand('myip', text); return; }
+                if (lowerText === 'gps') { executeApiCommand('gps', text); return; }
+                if (lowerText.startsWith('weather ')) { executeApiCommand('weather', text); return; }
+                if (lowerText.startsWith('qr ')) { executeApiCommand('qr', text); return; }
+                if (lowerText.startsWith('calc ')) { executeApiCommand('calc', text); return; }
 
                 // IF NO COMMAND, PROCESS AS REGULAR TYPING EFFECT
                 const lines = text.split('\n');
@@ -791,13 +793,13 @@
 
                 try {
                     if (cmd === 'myip') {
-                        // Reliable API for public IP Data
-                        const res = await fetch('https://ipinfo.io/json');
-                        if(!res.ok) throw new Error("Failed to fetch IP data");
+                        // GeoJS API: Free, reliable, and no CORS blocking
+                        const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
+                        if(!res.ok) throw new Error("Failed to fetch IP data. Network Blocked.");
                         const data = await res.json();
                         
                         let locationStr = data.city ? `${data.city}, ${data.region}` : 'Unknown Location (ISP Routed)';
-                        showCommandResult(`TARGET IP: ${data.ip}<br>NETWORK LOC: ${locationStr}<br>COUNTRY: ${data.country}<br>ISP: ${data.org}`);
+                        showCommandResult(`TARGET IP: ${data.ip}<br>NETWORK LOC: ${locationStr}<br>COUNTRY: ${data.country}<br>ISP: ${data.organization}`);
                     } 
                     else if (cmd === 'gps') {
                         if (!navigator.geolocation) {
