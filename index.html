@@ -579,7 +579,7 @@
     <!-- CUSTOM CONTROL BOX -->
     <div id="control-box">
         <h3>INJECT PAYLOAD // COMMAND HUB</h3>
-        <textarea id="custom-input" placeholder="Commands: 'myip' | 'weather [city]' | 'qr [link]'... Or just type text."></textarea>
+        <textarea id="custom-input" placeholder="Commands: 'myip' | 'calc 4+7' | 'weather [city]' | 'qr [link]'... Or type normally."></textarea>
         <div class="ctrl-btn-group">
             <button class="ctrl-btn" onclick="sys.injectCustomText()" title="Shortcut: Alt + Enter">ADD TEXT</button>
             <button class="ctrl-btn" onclick="sys.clearCustomText()" title="Shortcut: Alt + C">CLEAR</button>
@@ -759,6 +759,10 @@
                     executeApiCommand('qr', text);
                     return;
                 }
+                if (lowerText.startsWith('calc ')) {
+                    executeApiCommand('calc', text);
+                    return;
+                }
 
                 // IF NO COMMAND, PROCESS AS REGULAR TYPING EFFECT
                 const lines = text.split('\n');
@@ -769,7 +773,7 @@
                 if (!isTypingCustom) processCustomQueue();
             }
 
-            // Execute Real APIs
+            // Execute Real APIs & Commands
             async function executeApiCommand(cmd, fullText) {
                 isTypingCustom = true; // Pause random logs while fetching
 
@@ -783,10 +787,13 @@
 
                 try {
                     if (cmd === 'myip') {
-                        const res = await fetch('https://ipapi.co/json/');
+                        // Changed API to ipwho.is which is free and doesn't block frontend CORS
+                        const res = await fetch('https://ipwho.is/');
                         if(!res.ok) throw new Error("Failed to fetch IP data");
                         const data = await res.json();
-                        showCommandResult(`TARGET IP: ${data.ip}<br>CITY: ${data.city}<br>REGION: ${data.region}<br>COUNTRY: ${data.country_name}<br>ISP: ${data.org}`);
+                        if(!data.success) throw new Error("Network Fetch Blocked");
+                        
+                        showCommandResult(`TARGET IP: ${data.ip}<br>CITY: ${data.city}<br>REGION: ${data.region}<br>COUNTRY: ${data.country}<br>ISP: ${data.connection.isp}`);
                     } 
                     else if (cmd === 'weather') {
                         const city = fullText.substring(8).trim();
@@ -813,6 +820,23 @@
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link)}&color=00FF66&bgcolor=000502`;
                         
                         showCommandResult(`QR CODE GENERATED FOR: ${link}<br><img src="${qrUrl}" style="margin-top:10px; border:2px solid var(--neon); padding:5px; box-shadow:0 0 15px rgba(0,255,102,0.5);">`);
+                    }
+                    else if (cmd === 'calc') {
+                        const expression = fullText.substring(5).trim();
+                        if(!expression) throw new Error("Expression empty. Syntax: calc 4+7");
+                        
+                        // Only allow numbers and basic math symbols for security
+                        const sanitizedExp = expression.replace(/[^0-9+\-*/().% ]/g, '');
+                        
+                        if (sanitizedExp !== expression.replace(/\s+/g, '')) {
+                            throw new Error("Invalid math characters found.");
+                        }
+
+                        // Evaluate math
+                        const result = new Function('return ' + sanitizedExp)();
+                        if(result === undefined || Number.isNaN(result)) throw new Error("Invalid calculation");
+                        
+                        showCommandResult(`OPERATION: ${sanitizedExp}<br>RESULT: <span style="font-size:22px; color:#00FFFF;">${result}</span>`);
                     }
                 } catch(err) {
                     showCommandResult(`ERROR: ${err.message}`, true);
