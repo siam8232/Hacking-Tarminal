@@ -410,10 +410,10 @@
         @keyframes extremeStrobe {
             0% { background: #220000; color: #FFF; }
             20% { background: #FF0000; color: #000; }
-            40% { background: #550000; color: #FFF; }
-            60% { background: #000000; color: #FF0000; }
-            80% { background: #FF0000; color: #FFF; }
-            100% { background: #110000; color: #FF0000; }
+            40% { background: #000000; color: #FFF; }
+            60% { background: #110000; color: #FF0000; }
+            80% { background: #000; color: #FFF; }
+            100% { background: #FF0000; color: #FFF; }
         }
 
         /* =========================================
@@ -982,47 +982,45 @@
 
                                     document.body.style.animation = "nightmareShake 0.1s infinite";
                                     
-                                    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background-color:#550000;color:#FFF;font-family:'Courier New', monospace;overflow:hidden;animation:extremeStrobe 0.15s infinite;";
+                                    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background-color:#050000;color:#FFF;font-family:'Courier New', monospace;overflow:hidden;animation:extremeStrobe 0.15s infinite;";
                                     
-                                    // Massive Skull in background
-                                    const skull = document.createElement('div');
-                                    skull.innerHTML = "☠️";
-                                    skull.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80vw;opacity:0.2;color:#000;";
-                                    overlay.appendChild(skull);
+                                    // Giant dynamic background symbol
+                                    const giantSymbol = document.createElement('div');
+                                    giantSymbol.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:70vw;opacity:0.3;color:#F00;pointer-events:none;mix-blend-mode:screen;line-height:1;transition:all 0.1s;";
+                                    overlay.appendChild(giantSymbol);
+                                    const symbols = ["☠️", "☣️", "☢️", "👁️", "⚠️", "❌", "🩸", "SYSTEM_FAIL", "0xDEAD", "NO_ESCAPE"];
 
-                                    // Fast scrolling text container
-                                    const crashTerm = document.createElement('div');
-                                    crashTerm.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;padding:20px;font-size:16px;line-height:1.2;text-align:left;color:#FFaaaa;text-shadow:none;box-sizing:border-box;";
-                                    overlay.appendChild(crashTerm);
+                                    // Text container for flooding screen
+                                    const chaosText = document.createElement('div');
+                                    chaosText.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;font-size:18px;line-height:1.1;word-break:break-all;color:#FF3333;opacity:0.8;font-weight:bold;overflow:hidden;";
+                                    overlay.appendChild(chaosText);
 
-                                    // Flashing Giant Text
-                                    const flashText = document.createElement('div');
-                                    flashText.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:8vw;font-weight:900;color:#FFF;text-shadow:0 0 30px #F00, 0 0 50px #F00;text-align:center;width:100%;mix-blend-mode:difference;animation:blink 0.1s infinite;";
-                                    overlay.appendChild(flashText);
-
-                                    const scaryPhrases = ["FATAL KERNEL PANIC", "OVERVOLTING CPU...", "MEMORY CORRUPTION DETECTED", "WIPING BOOT SECTOR", "DELETING SYSTEM32", "HARDWARE MELTDOWN IMMINENT", "RANSOMWARE ENCRYPTION ACTIVE", "DATA EXFILTRATION 100%"];
-                                    const hexChars = "0123456789ABCDEF";
+                                    const scaryPhrases = ["FATAL ERROR", "SYSTEM CORRUPT", "MELTDOWN", "DATA BREACH", "WIPING SECTOR", "KERNEL PANIC", "HARDWARE FAILURE", "0xDEADBEEF", "DELETING SYSTEM32"];
 
                                     let dumpIntv = setInterval(() => {
-                                        // Terminal Dump
-                                        let dump = "";
-                                        for(let i=0; i<15; i++) {
-                                            let hexLine = "0x";
-                                            for(let j=0; j<16; j++) hexLine += hexChars[Math.floor(Math.random()*16)];
-                                            dump += `${hexLine} : <span style="color:#FFF;">${scaryPhrases[Math.floor(Math.random()*scaryPhrases.length)]}</span> <br>`;
+                                        // Update giant symbol rapidly
+                                        giantSymbol.innerHTML = symbols[Math.floor(Math.random()*symbols.length)];
+                                        giantSymbol.style.transform = `translate(-50%, -50%) scale(${0.8 + Math.random() * 0.7}) rotate(${Math.random() * 40 - 20}deg)`;
+                                        giantSymbol.style.color = Math.random() > 0.5 ? '#F00' : '#FFF';
+
+                                        // Generate an intensely packed wall of text
+                                        let textWall = "";
+                                        for(let i=0; i<300; i++) {
+                                            textWall += scaryPhrases[Math.floor(Math.random()*scaryPhrases.length)] + " [" + Math.floor(Math.random()*999999).toString(16).toUpperCase() + "] ";
+                                            if(Math.random() > 0.95) textWall += "<br>";
                                         }
-                                        crashTerm.innerHTML += dump;
-                                        crashTerm.scrollTop = crashTerm.scrollHeight;
                                         
-                                        if(crashTerm.childNodes.length > 50) {
-                                            crashTerm.innerHTML = ""; 
+                                        // Giant floating words
+                                        let hugeFlash = "";
+                                        for(let j=0; j<Math.floor(Math.random()*4)+1; j++) {
+                                            let top = Math.random() * 90;
+                                            let left = Math.random() * 80;
+                                            let size = Math.random() * 10 + 5;
+                                            hugeFlash += `<div style="position:absolute; top:${top}%; left:${left}%; font-size:${size}vw; color:${Math.random() > 0.5 ? '#FFF' : '#000'}; background:${Math.random() > 0.5 ? '#F00' : 'transparent'}; padding:5px; text-shadow:0 0 20px #F00; font-weight:900; z-index:99;">${scaryPhrases[Math.floor(Math.random() * scaryPhrases.length)]}</div>`;
                                         }
 
-                                        // Flashing Center Text
-                                        if(Math.random() > 0.4) {
-                                            flashText.innerHTML = scaryPhrases[Math.floor(Math.random()*scaryPhrases.length)];
-                                        }
-                                    }, 60);
+                                        chaosText.innerHTML = textWall + hugeFlash;
+                                    }, 100);
 
                                     // RESET AFTER 15 SECONDS
                                     setTimeout(() => {
