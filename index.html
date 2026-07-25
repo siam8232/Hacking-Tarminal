@@ -373,7 +373,7 @@
         .ctrl-btn.active { background: #FFA500; border-color: #FFA500; color: #000; }
 
         /* =========================================
-           ANIMATIONS
+           ANIMATIONS & EXTREME EFFECTS
            ========================================= */
         @keyframes panGrid {
             from { background-position: 0 0; }
@@ -392,25 +392,27 @@
             50% { text-shadow: 0 0 20px var(--neon), 0 0 30px var(--neon); }
         }
 
-        /* Nuke Screen Shake and Glitch Animations */
-        @keyframes violentShake {
-            0% { transform: translate(2px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(0px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(2px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(2px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        /* Nuke EXTREME Screen Shake and Glitch Animations */
+        @keyframes extremeShake {
+            0% { transform: translate(5px, 5px) rotate(0deg); }
+            10% { transform: translate(-5px, -10px) rotate(-2deg); }
+            20% { transform: translate(-15px, 0px) rotate(2deg); }
+            30% { transform: translate(0px, 15px) rotate(0deg); }
+            40% { transform: translate(10px, -10px) rotate(2deg); }
+            50% { transform: translate(-10px, 10px) rotate(-2deg); }
+            60% { transform: translate(-15px, 5px) rotate(0deg); }
+            70% { transform: translate(15px, 5px) rotate(-2deg); }
+            80% { transform: translate(-5px, -5px) rotate(2deg); }
+            90% { transform: translate(10px, 15px) rotate(0deg); }
+            100% { transform: translate(5px, -15px) rotate(-2deg); }
         }
         
-        @keyframes glitchFlash {
-            0% { background: #FF0000; color: #000000; }
-            50% { background: #000000; color: #FF0000; }
-            100% { background: #FF0000; color: #000000; }
+        @keyframes terrifyingFlash {
+            0% { background: #FF0000; color: #FFF; filter: invert(0%); }
+            25% { background: #000; color: #FF0000; filter: invert(100%); }
+            50% { background: #FFF; color: #000; filter: invert(0%); }
+            75% { background: #550000; color: #FFF; filter: invert(100%); }
+            100% { background: #FF0000; color: #FFF; filter: invert(0%); }
         }
 
         /* =========================================
@@ -543,7 +545,7 @@
                     <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);"></div>
                 </div>
 
-                <!-- SIMPLIFIED COMMAND LIST -->
+                <!-- COMMAND LIST -->
                 <div style="margin-top:15px; border-top: 1px dashed var(--neon-dim); padding-top:10px;">
                     <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:8px; color:#FFA500;">AVAILABLE COMMANDS //</div>
                     <div style="font-size:10px; line-height: 1.6; color:#FFF; text-shadow: 0 0 3px rgba(255,255,255,0.3);">
@@ -630,12 +632,10 @@
     <!-- MAIN JAVASCRIPT -->
     <script>
         const sys = (function() {
-            // State
             let isPaused = false;
             let customQueue = [];
             let isTypingCustom = false;
             
-            // DOM Elements
             const els = {
                 terminal: document.getElementById('main-terminal'),
                 terminalContent: document.querySelector('#center-panel .panel-content'),
@@ -664,7 +664,6 @@
             ];
 
             const liveMetrics = ['TEMP', 'VOLT', 'FPS', 'PING', 'UPLINK', 'DWNLINK'];
-            
             const logTypes = ['INFO', 'WARN', 'ERR', 'SUCC'];
             const logMessages = [
                 "INITIALIZING KERNEL MODULES...", "SCANNING PORT RANGE 0-65535",
@@ -675,8 +674,8 @@
                 "THREAD CREATED - ID:", "LISTENING ON PORT", "SYSTEM READY"
             ];
 
-            // Web Audio API LOUD Beep Generator
-            function playBeep(freq = 800, duration = 150, waveType = 'square', volume = 0.3) {
+            // Loud Beep Generator
+            function playBeep(freq = 800, duration = 150, waveType = 'square', volume = 0.5) {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return;
@@ -689,14 +688,11 @@
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start();
-                    setTimeout(() => {
-                        osc.stop();
-                        audioCtx.close();
-                    }, duration);
+                    setTimeout(() => { osc.stop(); audioCtx.close(); }, duration);
                 } catch(e) {}
             }
 
-            // Loud Sci-Fi Crash Sound for Nuke
+            // Loud Sci-Fi Crash Sound for Nuke Start
             function playExplosion() {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -707,12 +703,58 @@
                     osc.type = 'sawtooth';
                     osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
                     osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 1.5);
-                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(1, audioCtx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start();
                     setTimeout(() => { osc.stop(); audioCtx.close(); }, 1500);
+                } catch(e) {}
+            }
+
+            // Terrifying 10-Second Glitch Sound Loop
+            function playDistortedNoise(duration) {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+                    const audioCtx = new AudioContext();
+                    
+                    const osc1 = audioCtx.createOscillator(); // Low rumble
+                    osc1.type = 'sawtooth';
+                    osc1.frequency.setValueAtTime(50, audioCtx.currentTime);
+                    
+                    const osc2 = audioCtx.createOscillator(); // High pitch glitch
+                    osc2.type = 'square';
+                    osc2.frequency.setValueAtTime(2000, audioCtx.currentTime);
+                    
+                    const gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+                    
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    osc1.start();
+                    osc2.start();
+                    
+                    // Rapidly randomize frequency to sound like broken hardware
+                    const glitchIntv = setInterval(() => {
+                        if (audioCtx.state === 'closed') {
+                            clearInterval(glitchIntv);
+                        } else {
+                            try {
+                                osc2.frequency.setValueAtTime(Math.random() * 3000 + 100, audioCtx.currentTime);
+                                osc1.frequency.setValueAtTime(Math.random() * 150 + 20, audioCtx.currentTime);
+                            } catch(e){}
+                        }
+                    }, 50);
+
+                    setTimeout(() => {
+                        clearInterval(glitchIntv);
+                        osc1.stop();
+                        osc2.stop();
+                        audioCtx.close();
+                    }, duration);
                 } catch(e) {}
             }
 
@@ -938,29 +980,36 @@
 
                         let c = 10;
                         await new Promise(resolve => {
-                            const intv = setInterval(() => {
+                            const countIntv = setInterval(() => {
                                 if (c > 0) {
                                     overlay.innerHTML = `<h1 style="font-size:8vw;margin:0;animation:blink 0.5s infinite;text-align:center;">SYSTEM BREACHED</h1><h2 style="font-size:12vw;margin:0;">${c}</h2>`;
-                                    playBeep(c <= 3 ? 1200 : 800, c <= 3 ? 200 : 100, 'square', 0.4);
+                                    playBeep(c <= 3 ? 1200 : 800, c <= 3 ? 200 : 100, 'square', 0.8);
                                 }
                                 c--;
                                 if(c < 0) {
-                                    clearInterval(intv);
+                                    clearInterval(countIntv);
+                                    
+                                    // 10 SECONDS OF EXTREME TERROR
                                     playExplosion();
+                                    playDistortedNoise(10000); 
+
+                                    document.body.style.animation = "extremeShake 0.1s infinite";
+                                    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;font-family:monospace;font-size:24px;overflow:hidden;word-break:break-all;animation:terrifyingFlash 0.1s infinite;padding:20px;text-align:center;";
                                     
-                                    // Extreme Glitch and Chaos Visuals
-                                    document.body.style.animation = "violentShake 0.1s infinite";
-                                    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;font-family:monospace;font-size:24px;overflow:hidden;word-break:break-all;animation:glitchFlash 0.1s infinite;padding:20px;";
+                                    const glitchWords = ["FATAL ERROR", "0xDEADBEEF", "SYSTEM CORRUPTED", "☠️", "☣️", "MEMORY LEAK", "KERNEL PANIC"];
                                     
-                                    let chars = "0101010101CRITICAL010101FAILURE0101FATAL0101ERR0x0000FF";
                                     let dumpIntv = setInterval(() => {
-                                        let rnd = "";
-                                        for(let i=0; i<250; i++) rnd += chars.charAt(Math.floor(Math.random() * chars.length));
-                                        overlay.innerHTML += rnd + "<br>";
-                                        overlay.scrollTop = overlay.scrollHeight;
+                                        let content = "";
+                                        for(let i=0; i<50; i++) {
+                                            content += glitchWords[Math.floor(Math.random() * glitchWords.length)] + " ";
+                                        }
+                                        if(Math.random() > 0.5) {
+                                            content += `<br><span style="font-size:${Math.random()*10 + 5}vw; line-height:1;">DESTROYED</span><br>`;
+                                        }
+                                        overlay.innerHTML = content;
                                     }, 50);
 
-                                    // Soft Reset after 3 seconds of chaos
+                                    // RESET AFTER 10 SECONDS
                                     setTimeout(() => {
                                         clearInterval(dumpIntv);
                                         document.body.style.animation = "";
@@ -981,7 +1030,7 @@
                                             clearTerminal();
                                             resolve();
                                         }, 3000); // 3 seconds of rebooting
-                                    }, 3000); // 3 seconds of chaos
+                                    }, 10000); // 10 seconds of terrifying chaos
                                 }
                             }, 1000);
                         });
