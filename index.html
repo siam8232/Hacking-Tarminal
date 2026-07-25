@@ -244,7 +244,7 @@
             padding: 10px 12px;
             margin: 10px 0;
             letter-spacing: 1px;
-            box-shadow: inset 0 0 10px rgba(255, 165, 0, 0.1);
+            box-shadow: inset 0 0 100px rgba(255, 165, 0, 0.1);
         }
         
         .log-line.api-result {
@@ -560,6 +560,10 @@
                             <span style="color:#CCC;">Live Weather</span>
                         </div>
                         <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.1); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 5px var(--neon);">> speak [msg]</span> 
+                            <span style="color:#CCC;">Robotic Voice</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.1); padding-bottom:3px; margin-bottom:3px;">
                             <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 5px var(--neon);">> qr [link]</span> 
                             <span style="color:#CCC;">Generate QR</span>
                         </div>
@@ -705,6 +709,23 @@
                 "THREAD CREATED - ID:", "LISTENING ON PORT", "SYSTEM READY"
             ];
 
+            // Robotic Voice Function (Supports Bengali/English)
+            function robotSpeak(text) {
+                if (!window.speechSynthesis) return;
+                window.speechSynthesis.cancel(); // Stop existing speech
+                const msg = new SpeechSynthesisUtterance(text);
+                msg.pitch = 0.6; // Deep voice
+                msg.rate = 0.85; // Slow robotic pace
+                msg.volume = 1.0;
+                
+                // If text contains Bengali characters, try to find a Bengali voice
+                const isBengali = /[\u0980-\u09FF]/.test(text);
+                if (isBengali) msg.lang = 'bn-BD';
+                else msg.lang = 'en-US';
+
+                window.speechSynthesis.speak(msg);
+            }
+
             // Loud Klaxon Siren (For Countdown)
             function playKlaxonSiren() {
                 try {
@@ -728,42 +749,28 @@
                 } catch(e) {}
             }
 
-            // Extreme Glitch and Destructive Noise Generator (For 15s Crash)
+            // Extreme Glitch Noise Generator (For 15s Crash)
             function playFatalGlitchNoise(durationMs) {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return;
                     const audioCtx = new AudioContext();
-                    
                     const osc1 = audioCtx.createOscillator(); osc1.type = 'square';
                     const osc2 = audioCtx.createOscillator(); osc2.type = 'sawtooth';
                     const gain = audioCtx.createGain();
-                    
-                    gain.gain.value = 0.8; // Very Loud
-                    
-                    osc1.connect(gain);
-                    osc2.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    
-                    osc1.start();
-                    osc2.start();
-                    
+                    gain.gain.value = 0.8;
+                    osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+                    osc1.start(); osc2.start();
                     const noiseIntv = setInterval(() => {
-                        if (audioCtx.state === 'closed') {
-                            clearInterval(noiseIntv);
-                        } else {
+                        if (audioCtx.state === 'closed') clearInterval(noiseIntv);
+                        else {
                             try {
                                 osc1.frequency.setValueAtTime(Math.random() * 2000 + 100, audioCtx.currentTime);
                                 osc2.frequency.setValueAtTime(Math.random() * 500 + 20, audioCtx.currentTime);
                             } catch(e){}
                         }
                     }, 40);
-
-                    setTimeout(() => {
-                        clearInterval(noiseIntv);
-                        osc1.stop(); osc2.stop();
-                        audioCtx.close();
-                    }, durationMs);
+                    setTimeout(() => { clearInterval(noiseIntv); osc1.stop(); osc2.stop(); audioCtx.close(); }, durationMs);
                 } catch(e) {}
             }
 
@@ -882,6 +889,7 @@
                 if (lowerText.startsWith('calc ')) { executeApiCommand('calc', text); return; }
                 if (lowerText.startsWith('scan ')) { executeApiCommand('scan', text); return; }
                 if (lowerText.startsWith('crack ')) { executeApiCommand('crack', text); return; }
+                if (lowerText.startsWith('speak ')) { executeApiCommand('speak', text); return; }
 
                 const lines = text.split('\n');
                 lines.forEach(line => {
@@ -904,7 +912,13 @@
                 }
 
                 try {
-                    if (cmd === 'scan') {
+                    if (cmd === 'speak') {
+                        const msgToSpeak = fullText.substring(6).trim();
+                        if(!msgToSpeak) throw new Error("Message empty. Syntax: speak [text]");
+                        robotSpeak(msgToSpeak);
+                        showCommandResult(`AUDIO_OUTPUT: Transmitting voice data...<br>CONTENT: "${msgToSpeak}"`);
+                    }
+                    else if (cmd === 'scan') {
                         const target = fullText.substring(5).trim();
                         if(!target) throw new Error("Target empty. Syntax: scan [ip/url]");
                         const scanDiv = document.createElement('div');
@@ -979,15 +993,12 @@
                         showCommandResult(`[SYSTEM DIAGNOSTIC COMPLETE]<br><br>${infoHtml}`);
                     }
                     else if (cmd === 'nuke') {
-                        // PRE-NUKE COLOR CHANGE
                         document.documentElement.style.setProperty('--neon', '#FF0033');
                         document.documentElement.style.setProperty('--neon-dim', 'rgba(255, 0, 51, 0.3)');
                         document.documentElement.style.setProperty('--neon-glow', 'rgba(255, 0, 51, 0.7)');
-                        
                         const overlay = document.createElement('div');
                         overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(50,0,0,0.5);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FF0033;text-shadow:0 0 20px #FF0033;font-family:monospace;backdrop-filter:blur(3px);";
                         document.body.appendChild(overlay);
-
                         let c = 10;
                         await new Promise(resolve => {
                             const countIntv = setInterval(() => {
@@ -998,75 +1009,42 @@
                                 c--;
                                 if(c < 0) {
                                     clearInterval(countIntv);
-                                    
-                                    // HIDE ENTIRE HUD SO IT LOOKS LIKE A TRUE CRASH
                                     els.hudContainer.style.display = 'none';
                                     document.getElementById('control-box').style.display = 'none';
-
-                                    // 15 SECONDS OF ABSOLUTE TERROR
                                     playFatalGlitchNoise(15000); 
-
                                     document.body.style.animation = "nightmareShake 0.1s infinite";
-                                    
                                     overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background-color:#050000;color:#FFF;font-family:'Courier New', monospace;overflow:hidden;animation:extremeStrobe 0.15s infinite;";
-                                    
-                                    // Giant dynamic background symbol
                                     const giantSymbol = document.createElement('div');
                                     giantSymbol.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:70vw;opacity:0.3;color:#F00;pointer-events:none;mix-blend-mode:screen;line-height:1;transition:all 0.1s;";
                                     overlay.appendChild(giantSymbol);
                                     const symbols = ["☠️", "☣️", "☢️", "👁️", "⚠️", "❌", "🩸", "SYSTEM_FAIL", "0xDEAD", "NO_ESCAPE"];
-
-                                    // Text container for flooding screen
                                     const chaosText = document.createElement('div');
                                     chaosText.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;font-size:18px;line-height:1.1;word-break:break-all;color:#FF3333;opacity:0.8;font-weight:bold;overflow:hidden;";
                                     overlay.appendChild(chaosText);
-
                                     const scaryPhrases = ["FATAL ERROR", "SYSTEM CORRUPT", "MELTDOWN", "DATA BREACH", "WIPING SECTOR", "KERNEL PANIC", "HARDWARE FAILURE", "0xDEADBEEF", "DELETING SYSTEM32"];
-
                                     let dumpIntv = setInterval(() => {
-                                        // Update giant symbol rapidly
                                         giantSymbol.innerHTML = symbols[Math.floor(Math.random()*symbols.length)];
                                         giantSymbol.style.transform = `translate(-50%, -50%) scale(${0.8 + Math.random() * 0.7}) rotate(${Math.random() * 40 - 20}deg)`;
-                                        giantSymbol.style.color = Math.random() > 0.5 ? '#F00' : '#FFF';
-
-                                        // Generate an intensely packed wall of text
                                         let textWall = "";
-                                        for(let i=0; i<300; i++) {
-                                            textWall += scaryPhrases[Math.floor(Math.random()*scaryPhrases.length)] + " [" + Math.floor(Math.random()*999999).toString(16).toUpperCase() + "] ";
-                                            if(Math.random() > 0.95) textWall += "<br>";
-                                        }
-                                        
-                                        // Giant floating words
+                                        for(let i=0; i<300; i++) textWall += scaryPhrases[Math.floor(Math.random()*scaryPhrases.length)] + " [" + Math.floor(Math.random()*999999).toString(16).toUpperCase() + "] ";
                                         let hugeFlash = "";
                                         for(let j=0; j<Math.floor(Math.random()*4)+1; j++) {
-                                            let top = Math.random() * 90;
-                                            let left = Math.random() * 80;
-                                            let size = Math.random() * 10 + 5;
+                                            let top = Math.random() * 90; let left = Math.random() * 80; let size = Math.random() * 10 + 5;
                                             hugeFlash += `<div style="position:absolute; top:${top}%; left:${left}%; font-size:${size}vw; color:${Math.random() > 0.5 ? '#FFF' : '#000'}; background:${Math.random() > 0.5 ? '#F00' : 'transparent'}; padding:5px; text-shadow:0 0 20px #F00; font-weight:900; z-index:99;">${scaryPhrases[Math.floor(Math.random() * scaryPhrases.length)]}</div>`;
                                         }
-
                                         chaosText.innerHTML = textWall + hugeFlash;
                                     }, 100);
-
-                                    // RESET AFTER 15 SECONDS
                                     setTimeout(() => {
-                                        clearInterval(dumpIntv);
-                                        document.body.style.animation = "";
-                                        overlay.style.animation = "";
-                                        overlay.style.background = "#000";
+                                        clearInterval(dumpIntv); document.body.style.animation = ""; overlay.style.animation = ""; overlay.style.background = "#000";
                                         overlay.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#00FF66;text-shadow:0 0 10px #00FF66;font-size:24px;text-align:center;"><div style="animation:blink 1s infinite;">_</div><br><br>REBOOTING SEC-NET OS...<br>RESTORING KERNEL... OK</div>`;
-                                        
                                         setTimeout(() => {
-                                            overlay.remove();
-                                            els.hudContainer.style.display = 'grid'; // Restore HUD
-                                            document.getElementById('control-box').style.display = 'flex'; // Restore Control Box
+                                            overlay.remove(); els.hudContainer.style.display = 'grid'; document.getElementById('control-box').style.display = 'flex';
                                             document.documentElement.style.setProperty('--neon', '#00FF66');
                                             document.documentElement.style.setProperty('--neon-dim', 'rgba(0, 255, 102, 0.3)');
                                             document.documentElement.style.setProperty('--neon-glow', 'rgba(0, 255, 102, 0.7)');
-                                            clearTerminal();
-                                            resolve();
+                                            clearTerminal(); resolve();
                                         }, 4000); 
-                                    }, 15000); // 15 seconds of chaos
+                                    }, 15000); 
                                 }
                             }, 1000);
                         });
