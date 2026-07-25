@@ -392,6 +392,27 @@
             50% { text-shadow: 0 0 20px var(--neon), 0 0 30px var(--neon); }
         }
 
+        /* Nuke Screen Shake and Glitch Animations */
+        @keyframes violentShake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        
+        @keyframes glitchFlash {
+            0% { background: #FF0000; color: #000000; }
+            50% { background: #000000; color: #FF0000; }
+            100% { background: #FF0000; color: #000000; }
+        }
+
         /* =========================================
            PREMIUM BRANDING
            ========================================= */
@@ -654,17 +675,17 @@
                 "THREAD CREATED - ID:", "LISTENING ON PORT", "SYSTEM READY"
             ];
 
-            // Web Audio API Beep Generator
-            function playBeep(freq = 800, duration = 150) {
+            // Web Audio API LOUD Beep Generator
+            function playBeep(freq = 800, duration = 150, waveType = 'square', volume = 0.3) {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return;
                     const audioCtx = new AudioContext();
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
-                    osc.type = 'square';
+                    osc.type = waveType;
                     osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime); // Keep volume low
+                    gain.gain.setValueAtTime(volume, audioCtx.currentTime); 
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start();
@@ -672,6 +693,26 @@
                         osc.stop();
                         audioCtx.close();
                     }, duration);
+                } catch(e) {}
+            }
+
+            // Loud Sci-Fi Crash Sound for Nuke
+            function playExplosion() {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+                    const audioCtx = new AudioContext();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 1.5);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    setTimeout(() => { osc.stop(); audioCtx.close(); }, 1500);
                 } catch(e) {}
             }
 
@@ -900,25 +941,47 @@
                             const intv = setInterval(() => {
                                 if (c > 0) {
                                     overlay.innerHTML = `<h1 style="font-size:8vw;margin:0;animation:blink 0.5s infinite;text-align:center;">SYSTEM BREACHED</h1><h2 style="font-size:12vw;margin:0;">${c}</h2>`;
-                                    playBeep(c <= 3 ? 1200 : 800, c <= 3 ? 200 : 100);
+                                    playBeep(c <= 3 ? 1200 : 800, c <= 3 ? 200 : 100, 'square', 0.4);
                                 }
                                 c--;
                                 if(c < 0) {
                                     clearInterval(intv);
-                                    playBeep(150, 1000); // Final explosion sound
+                                    playExplosion();
                                     
-                                    // Soft Reset (White flash, then back to green)
-                                    overlay.style.background = "rgba(255,255,255,1)";
-                                    overlay.innerHTML = "";
+                                    // Extreme Glitch and Chaos Visuals
+                                    document.body.style.animation = "violentShake 0.1s infinite";
+                                    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;font-family:monospace;font-size:24px;overflow:hidden;word-break:break-all;animation:glitchFlash 0.1s infinite;padding:20px;";
                                     
+                                    let chars = "0101010101CRITICAL010101FAILURE0101FATAL0101ERR0x0000FF";
+                                    let dumpIntv = setInterval(() => {
+                                        let rnd = "";
+                                        for(let i=0; i<250; i++) rnd += chars.charAt(Math.floor(Math.random() * chars.length));
+                                        overlay.innerHTML += rnd + "<br>";
+                                        overlay.scrollTop = overlay.scrollHeight;
+                                    }, 50);
+
+                                    // Soft Reset after 3 seconds of chaos
                                     setTimeout(() => {
-                                        overlay.remove();
-                                        document.documentElement.style.setProperty('--neon', '#00FF66');
-                                        document.documentElement.style.setProperty('--neon-dim', 'rgba(0, 255, 102, 0.3)');
-                                        document.documentElement.style.setProperty('--neon-glow', 'rgba(0, 255, 102, 0.7)');
-                                        clearTerminal();
-                                        resolve();
-                                    }, 500);
+                                        clearInterval(dumpIntv);
+                                        document.body.style.animation = "";
+                                        overlay.style.animation = "";
+                                        overlay.style.background = "#000";
+                                        overlay.style.color = "#00FF66";
+                                        overlay.style.textShadow = "0 0 10px #00FF66";
+                                        overlay.style.display = "flex";
+                                        overlay.style.alignItems = "center";
+                                        overlay.style.justifyContent = "center";
+                                        overlay.innerHTML = `<h2 style="font-size:4vw; animation:blink 1s infinite;">REBOOTING SEC-NET OS...</h2>`;
+                                        
+                                        setTimeout(() => {
+                                            overlay.remove();
+                                            document.documentElement.style.setProperty('--neon', '#00FF66');
+                                            document.documentElement.style.setProperty('--neon-dim', 'rgba(0, 255, 102, 0.3)');
+                                            document.documentElement.style.setProperty('--neon-glow', 'rgba(0, 255, 102, 0.7)');
+                                            clearTerminal();
+                                            resolve();
+                                        }, 3000); // 3 seconds of rebooting
+                                    }, 3000); // 3 seconds of chaos
                                 }
                             }, 1000);
                         });
