@@ -516,8 +516,14 @@
                     <canvas id="fan2" class="circle-canvas"></canvas>
                 </div>
                 
-                <!-- NEW: AVAILABLE COMMANDS (UPDATED LIST) -->
-                <div style="margin-top:20px; padding-top:10px;">
+                <!-- LIVE DATA -->
+                <div style="margin-top:15px;">
+                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px;">LIVE DATA</div>
+                    <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);"></div>
+                </div>
+
+                <!-- SIMPLIFIED COMMAND LIST -->
+                <div style="margin-top:15px; border-top: 1px dashed var(--neon-dim); padding-top:10px;">
                     <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:8px; color:#FFA500;">AVAILABLE COMMANDS //</div>
                     <div style="font-size:10px; line-height: 1.6; color:#FFF; text-shadow: 0 0 3px rgba(255,255,255,0.3);">
                         <div><span style="color:var(--neon); font-weight:bold;">myip / gps</span> <span style="opacity:0.7;">- Net/Loc Scan</span></div>
@@ -614,6 +620,7 @@
                 terminalContent: document.querySelector('#center-panel .panel-content'),
                 activity: document.getElementById('activity-logs'),
                 statGauges: document.getElementById('stat-gauges'),
+                liveData: document.getElementById('live-data-list'),
                 hexDump: document.getElementById('hex-dump-container'),
                 threat: document.getElementById('threat-indicator'),
                 customInput: document.getElementById('custom-input'),
@@ -634,6 +641,8 @@
                 { id: 'CPU', val: 0 }, { id: 'MEM', val: 0 }, 
                 { id: 'GPU', val: 0 }, { id: 'SSD', val: 0 }, { id: 'NET', val: 0 }
             ];
+
+            const liveMetrics = ['TEMP', 'VOLT', 'FPS', 'PING', 'UPLINK', 'DWNLINK'];
             
             const logTypes = ['INFO', 'WARN', 'ERR', 'SUCC'];
             const logMessages = [
@@ -644,6 +653,27 @@
                 "LOADING AI NEURAL NET MODULE", "FIREWALL ENABLED - STRICT MODE",
                 "THREAD CREATED - ID:", "LISTENING ON PORT", "SYSTEM READY"
             ];
+
+            // Web Audio API Beep Generator
+            function playBeep(freq = 800, duration = 150) {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+                    const audioCtx = new AudioContext();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime); // Keep volume low
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    setTimeout(() => {
+                        osc.stop();
+                        audioCtx.close();
+                    }, duration);
+                } catch(e) {}
+            }
 
             function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
             function randFloat(min, max) { return Math.random() * (max - min) + min; }
@@ -701,7 +731,6 @@
                 }
             });
 
-            // KEYBOARD SHORTCUTS
             document.addEventListener('keydown', (e) => {
                 if ((e.altKey || e.shiftKey) && !e.ctrlKey && !e.metaKey) {
                     if (e.key === 'Enter') { e.preventDefault(); injectCustomText(); }
@@ -745,9 +774,6 @@
                 }
             }
 
-            // ==========================================
-            // API COMMAND LOGIC & CUSTOM TEXT
-            // ==========================================
             function injectCustomText() {
                 const text = els.customInput.value.trim();
                 if (!text) return;
@@ -755,7 +781,6 @@
                 els.customInput.value = '';
                 const lowerText = text.toLowerCase();
                 
-                // COMMAND CHECKS
                 if (lowerText === 'myip') { executeApiCommand('myip', text); return; }
                 if (lowerText === 'gps') { executeApiCommand('gps', text); return; }
                 if (lowerText === 'sysinfo') { executeApiCommand('sysinfo', text); return; }
@@ -766,7 +791,6 @@
                 if (lowerText.startsWith('scan ')) { executeApiCommand('scan', text); return; }
                 if (lowerText.startsWith('crack ')) { executeApiCommand('crack', text); return; }
 
-                // IF NO COMMAND, PROCESS AS REGULAR TYPING EFFECT
                 const lines = text.split('\n');
                 lines.forEach(line => {
                     if(line.trim() !== '') customQueue.push(line);
@@ -775,11 +799,9 @@
                 if (!isTypingCustom) processCustomQueue();
             }
 
-            // Execute Real APIs & Commands
             async function executeApiCommand(cmd, fullText) {
-                isTypingCustom = true; // Pause random logs while fetching/animating
+                isTypingCustom = true; 
 
-                // Skip "INITIATING MODULE" for Nuke to make it sudden
                 if (cmd !== 'nuke') {
                     const initDiv = document.createElement('div');
                     initDiv.className = 'log-line custom-highlight';
@@ -790,20 +812,16 @@
                 }
 
                 try {
-                    // 1. SCAN COMMAND
                     if (cmd === 'scan') {
                         const target = fullText.substring(5).trim();
                         if(!target) throw new Error("Target empty. Syntax: scan [ip/url]");
-                        
                         const scanDiv = document.createElement('div');
                         scanDiv.className = `log-line custom-highlight api-result`;
                         scanDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-SUCC">[PORT_SCANNER]</span> TARGET: ${target}<br><div class="scan-content" style="margin-top:5px; line-height: 1.6; font-family:monospace;"></div>`;
                         appendLog(els.terminal, scanDiv, 50);
                         const scanContent = scanDiv.querySelector('.scan-content');
-
                         const ports = [21, 22, 53, 80, 443, 3306, 8080];
                         let pIdx = 0;
-                        
                         await new Promise(resolve => {
                             const intv = setInterval(() => {
                                 if(pIdx < ports.length) {
@@ -816,24 +834,19 @@
                                     clearInterval(intv);
                                     resolve();
                                 }
-                            }, 400); // Speed of scan
+                            }, 400); 
                         });
                     }
-
-                    // 2. CRACK COMMAND
                     else if (cmd === 'crack') {
                         const target = fullText.substring(6).trim();
                         if(!target) throw new Error("Target empty. Syntax: crack [username/wifi]");
-                        
                         const crackDiv = document.createElement('div');
                         crackDiv.className = `log-line custom-highlight api-result`;
                         crackDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[BRUTE-FORCE]</span> TARGET: ${target}<br><div class="crack-content" style="margin-top:5px; font-family:monospace; word-break:break-all; color:#FFA500;"></div>`;
                         appendLog(els.terminal, crackDiv, 50);
                         const crackContent = crackDiv.querySelector('.crack-content');
-
                         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+{}|:<>?';
                         let ticks = 0;
-                        
                         await new Promise(resolve => {
                             const intv = setInterval(() => {
                                 let rnd = '';
@@ -847,11 +860,9 @@
                                     clearInterval(intv);
                                     resolve();
                                 }
-                            }, 80); // Speed of crack
+                            }, 80); 
                         });
                     }
-
-                    // 3. SYSINFO COMMAND
                     else if (cmd === 'sysinfo') {
                         const cores = navigator.hardwareConcurrency || 'Unknown';
                         const ram = navigator.deviceMemory || 'Unknown';
@@ -860,12 +871,10 @@
                         const ua = navigator.userAgent;
                         const screen = `${window.screen.width}x${window.screen.height}`;
                         const lang = navigator.language;
-                        
                         let connInfo = 'Unknown';
                         if (navigator.connection) {
                             connInfo = `${navigator.connection.effectiveType.toUpperCase()} (Downlink: ${navigator.connection.downlink}Mbps)`;
                         }
-
                         const infoHtml = `
                             <span style="color:#FFA500;">> OS_PLATFORM:</span> ${platform} [${vendor}]<br>
                             <span style="color:#FFA500;">> CPU_CORES:</span> ${cores}<br>
@@ -877,8 +886,6 @@
                         `;
                         showCommandResult(`[SYSTEM DIAGNOSTIC COMPLETE]<br><br>${infoHtml}`);
                     }
-
-                    // 4. NUKE COMMAND
                     else if (cmd === 'nuke') {
                         document.documentElement.style.setProperty('--neon', '#FF0033');
                         document.documentElement.style.setProperty('--neon-dim', 'rgba(255, 0, 51, 0.3)');
@@ -891,21 +898,31 @@
                         let c = 10;
                         await new Promise(resolve => {
                             const intv = setInterval(() => {
-                                overlay.innerHTML = `<h1 style="font-size:8vw;margin:0;animation:blink 0.5s infinite;text-align:center;">SYSTEM BREACHED</h1><h2 style="font-size:12vw;margin:0;">${c}</h2>`;
+                                if (c > 0) {
+                                    overlay.innerHTML = `<h1 style="font-size:8vw;margin:0;animation:blink 0.5s infinite;text-align:center;">SYSTEM BREACHED</h1><h2 style="font-size:12vw;margin:0;">${c}</h2>`;
+                                    playBeep(c <= 3 ? 1200 : 800, c <= 3 ? 200 : 100);
+                                }
                                 c--;
                                 if(c < 0) {
                                     clearInterval(intv);
-                                    document.body.innerHTML = '';
-                                    document.body.style.backgroundColor = '#000';
-                                    setTimeout(() => location.reload(), 1500); // Reloads page
-                                    resolve();
+                                    playBeep(150, 1000); // Final explosion sound
+                                    
+                                    // Soft Reset (White flash, then back to green)
+                                    overlay.style.background = "rgba(255,255,255,1)";
+                                    overlay.innerHTML = "";
+                                    
+                                    setTimeout(() => {
+                                        overlay.remove();
+                                        document.documentElement.style.setProperty('--neon', '#00FF66');
+                                        document.documentElement.style.setProperty('--neon-dim', 'rgba(0, 255, 102, 0.3)');
+                                        document.documentElement.style.setProperty('--neon-glow', 'rgba(0, 255, 102, 0.7)');
+                                        clearTerminal();
+                                        resolve();
+                                    }, 500);
                                 }
                             }, 1000);
                         });
-                        return; // Keeps it paused
                     }
-
-                    // 5. EXISTING APIs (myip, gps, weather, qr, calc)
                     else if (cmd === 'myip') {
                         const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
                         if(!res.ok) throw new Error("Failed to fetch IP data. Network Blocked.");
@@ -966,7 +983,6 @@
                 appendLog(els.terminal, resDiv, 50);
             }
 
-            // Normal typing effect
             function processCustomQueue() {
                 if (customQueue.length === 0 || isPaused) {
                     isTypingCustom = false;
@@ -1031,6 +1047,14 @@
                     document.getElementById(`bar-${s.id}`).style.width = `${s.val}%`;
                     document.getElementById(`val-${s.id}`).textContent = `${s.val.toFixed(1)}%`;
                 });
+
+                let liveHTML = '';
+                liveMetrics.forEach(m => {
+                    const val = (m === 'PING' || m === 'FPS' || m === 'TEMP') ? rand(20, 99) : 
+                                (m === 'FIREWALL') ? 'ACTIVE' : rHex(4);
+                    liveHTML += `<div style="display:flex; justify-content:space-between;"><span>${m}</span><span>${val}</span></div>`;
+                });
+                els.liveData.innerHTML = liveHTML;
 
                 let hexLines = '';
                 for(let i=0; i<8; i++) hexLines += `0x${rHex(4)}  ${rHex(4)} ${rHex(4)} ${rHex(4)} ${rHex(4)}<br>`;
