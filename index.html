@@ -233,7 +233,7 @@
         .log-type-ERR { color: #FF0033; }
         .log-type-SUCC { color: #00FFFF; }
 
-        /* Custom Highlighted Log (API Command Results & Normal Text) */
+        /* Custom Highlighted Log */
         .log-line.custom-highlight {
             font-size: 15px;
             color: #FFFFFF;
@@ -516,21 +516,18 @@
                     <canvas id="fan2" class="circle-canvas"></canvas>
                 </div>
                 
-                <!-- LIVE DATA -->
-                <div style="margin-top:15px;">
-                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px;">LIVE DATA</div>
-                    <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);"></div>
-                </div>
-
-                <!-- SIMPLIFIED COMMAND LIST -->
-                <div style="margin-top:15px; border-top: 1px dashed var(--neon-dim); padding-top:10px;">
+                <!-- NEW: AVAILABLE COMMANDS (UPDATED LIST) -->
+                <div style="margin-top:20px; padding-top:10px;">
                     <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:8px; color:#FFA500;">AVAILABLE COMMANDS //</div>
-                    <div style="font-size:11px; line-height: 1.8; color:#FFF; text-shadow: 0 0 3px rgba(255,255,255,0.3);">
-                        <div><span style="color:var(--neon); font-weight:bold;">myip</span> <span style="opacity:0.7;">- Check Network IP</span></div>
-                        <div><span style="color:var(--neon); font-weight:bold;">gps</span> <span style="opacity:0.7;">- Find Real Location</span></div>
-                        <div><span style="color:var(--neon); font-weight:bold;">weather [city]</span> <span style="opacity:0.7;">- Live Weather</span></div>
-                        <div><span style="color:var(--neon); font-weight:bold;">qr [link]</span> <span style="opacity:0.7;">- Generate QR Code</span></div>
-                        <div><span style="color:var(--neon); font-weight:bold;">calc [math]</span> <span style="opacity:0.7;">- Calculator (e.g. calc 2+2)</span></div>
+                    <div style="font-size:10px; line-height: 1.6; color:#FFF; text-shadow: 0 0 3px rgba(255,255,255,0.3);">
+                        <div><span style="color:var(--neon); font-weight:bold;">myip / gps</span> <span style="opacity:0.7;">- Net/Loc Scan</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">weather [loc]</span> <span style="opacity:0.7;">- Live Weather</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">qr [link]</span> <span style="opacity:0.7;">- Generate QR</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">calc [math]</span> <span style="opacity:0.7;">- Calculator</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">scan [url]</span> <span style="opacity:0.7;">- Port Scanner</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">crack [usr]</span> <span style="opacity:0.7;">- Brute-Force</span></div>
+                        <div><span style="color:var(--neon); font-weight:bold;">sysinfo</span> <span style="opacity:0.7;">- Device Data</span></div>
+                        <div><span style="color:#FF0033; font-weight:bold;">nuke</span> <span style="opacity:0.7; color:#FF0033;">- Self Destruct</span></div>
                     </div>
                 </div>
 
@@ -617,7 +614,6 @@
                 terminalContent: document.querySelector('#center-panel .panel-content'),
                 activity: document.getElementById('activity-logs'),
                 statGauges: document.getElementById('stat-gauges'),
-                liveData: document.getElementById('live-data-list'),
                 hexDump: document.getElementById('hex-dump-container'),
                 threat: document.getElementById('threat-indicator'),
                 customInput: document.getElementById('custom-input'),
@@ -638,9 +634,6 @@
                 { id: 'CPU', val: 0 }, { id: 'MEM', val: 0 }, 
                 { id: 'GPU', val: 0 }, { id: 'SSD', val: 0 }, { id: 'NET', val: 0 }
             ];
-
-            // Reduced liveMetrics slightly to make room for SYS_HOOKS list beautifully
-            const liveMetrics = ['TEMP', 'VOLT', 'FPS', 'PING', 'UPLINK', 'DWNLINK'];
             
             const logTypes = ['INFO', 'WARN', 'ERR', 'SUCC'];
             const logMessages = [
@@ -708,26 +701,13 @@
                 }
             });
 
-            // KEYBOARD SHORTCUTS (UPDATED: Alt or Shift)
+            // KEYBOARD SHORTCUTS
             document.addEventListener('keydown', (e) => {
-                // Trigger if Alt OR Shift is pressed (and prevent triggering standard browser tools like Ctrl+Shift+C)
                 if ((e.altKey || e.shiftKey) && !e.ctrlKey && !e.metaKey) {
-                    if (e.key === 'Enter') { 
-                        e.preventDefault(); 
-                        injectCustomText(); 
-                    }
-                    else if (e.key.toLowerCase() === 'c') { 
-                        e.preventDefault(); 
-                        clearCustomText(); 
-                    }
-                    else if (e.key.toLowerCase() === 'p') { 
-                        e.preventDefault(); 
-                        togglePause(); 
-                    }
-                    else if (e.key.toLowerCase() === 's') { 
-                        e.preventDefault(); 
-                        clearTerminal(); 
-                    }
+                    if (e.key === 'Enter') { e.preventDefault(); injectCustomText(); }
+                    else if (e.key.toLowerCase() === 'c') { e.preventDefault(); clearCustomText(); }
+                    else if (e.key.toLowerCase() === 'p') { e.preventDefault(); togglePause(); }
+                    else if (e.key.toLowerCase() === 's') { e.preventDefault(); clearTerminal(); }
                 }
             });
 
@@ -773,15 +753,18 @@
                 if (!text) return;
                 
                 els.customInput.value = '';
-                
                 const lowerText = text.toLowerCase();
                 
                 // COMMAND CHECKS
                 if (lowerText === 'myip') { executeApiCommand('myip', text); return; }
                 if (lowerText === 'gps') { executeApiCommand('gps', text); return; }
+                if (lowerText === 'sysinfo') { executeApiCommand('sysinfo', text); return; }
+                if (lowerText === 'nuke') { executeApiCommand('nuke', text); return; }
                 if (lowerText.startsWith('weather ')) { executeApiCommand('weather', text); return; }
                 if (lowerText.startsWith('qr ')) { executeApiCommand('qr', text); return; }
                 if (lowerText.startsWith('calc ')) { executeApiCommand('calc', text); return; }
+                if (lowerText.startsWith('scan ')) { executeApiCommand('scan', text); return; }
+                if (lowerText.startsWith('crack ')) { executeApiCommand('crack', text); return; }
 
                 // IF NO COMMAND, PROCESS AS REGULAR TYPING EFFECT
                 const lines = text.split('\n');
@@ -794,88 +777,179 @@
 
             // Execute Real APIs & Commands
             async function executeApiCommand(cmd, fullText) {
-                isTypingCustom = true; // Pause random logs while fetching
+                isTypingCustom = true; // Pause random logs while fetching/animating
 
-                // Show processing log
-                const initDiv = document.createElement('div');
-                initDiv.className = 'log-line custom-highlight';
-                initDiv.style.borderLeftColor = 'var(--neon)';
-                initDiv.style.background = 'transparent';
-                initDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[SYS_API]</span> INITIATING MODULE: ${cmd.toUpperCase()}...`;
-                appendLog(els.terminal, initDiv, 50);
+                // Skip "INITIATING MODULE" for Nuke to make it sudden
+                if (cmd !== 'nuke') {
+                    const initDiv = document.createElement('div');
+                    initDiv.className = 'log-line custom-highlight';
+                    initDiv.style.borderLeftColor = 'var(--neon)';
+                    initDiv.style.background = 'transparent';
+                    initDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[SYS_API]</span> INITIATING MODULE: ${cmd.toUpperCase()}...`;
+                    appendLog(els.terminal, initDiv, 50);
+                }
 
                 try {
-                    if (cmd === 'myip') {
-                        // GeoJS API: Free, reliable, and no CORS blocking
+                    // 1. SCAN COMMAND
+                    if (cmd === 'scan') {
+                        const target = fullText.substring(5).trim();
+                        if(!target) throw new Error("Target empty. Syntax: scan [ip/url]");
+                        
+                        const scanDiv = document.createElement('div');
+                        scanDiv.className = `log-line custom-highlight api-result`;
+                        scanDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-SUCC">[PORT_SCANNER]</span> TARGET: ${target}<br><div class="scan-content" style="margin-top:5px; line-height: 1.6; font-family:monospace;"></div>`;
+                        appendLog(els.terminal, scanDiv, 50);
+                        const scanContent = scanDiv.querySelector('.scan-content');
+
+                        const ports = [21, 22, 53, 80, 443, 3306, 8080];
+                        let pIdx = 0;
+                        
+                        await new Promise(resolve => {
+                            const intv = setInterval(() => {
+                                if(pIdx < ports.length) {
+                                    scanContent.innerHTML += `> Checking Port ${ports[pIdx]}... <span style="color:#00FF66; text-shadow:0 0 5px #00FF66;">[OPEN]</span><br>`;
+                                    els.terminalContent.scrollTop = els.terminalContent.scrollHeight;
+                                    pIdx++;
+                                } else {
+                                    scanContent.innerHTML += `<br><span style="color:#FFA500; font-weight:bold;">> FIREWALL BYPASSED. ROOT VULNERABILITY FOUND.</span>`;
+                                    els.terminalContent.scrollTop = els.terminalContent.scrollHeight;
+                                    clearInterval(intv);
+                                    resolve();
+                                }
+                            }, 400); // Speed of scan
+                        });
+                    }
+
+                    // 2. CRACK COMMAND
+                    else if (cmd === 'crack') {
+                        const target = fullText.substring(6).trim();
+                        if(!target) throw new Error("Target empty. Syntax: crack [username/wifi]");
+                        
+                        const crackDiv = document.createElement('div');
+                        crackDiv.className = `log-line custom-highlight api-result`;
+                        crackDiv.innerHTML = `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[BRUTE-FORCE]</span> TARGET: ${target}<br><div class="crack-content" style="margin-top:5px; font-family:monospace; word-break:break-all; color:#FFA500;"></div>`;
+                        appendLog(els.terminal, crackDiv, 50);
+                        const crackContent = crackDiv.querySelector('.crack-content');
+
+                        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+{}|:<>?';
+                        let ticks = 0;
+                        
+                        await new Promise(resolve => {
+                            const intv = setInterval(() => {
+                                let rnd = '';
+                                for(let i=0; i<45; i++) rnd += chars.charAt(Math.floor(Math.random() * chars.length));
+                                crackContent.innerText = `Attempting Hashes: \n${rnd}`;
+                                ticks++;
+                                if(ticks > 30) {
+                                    const pass = "ADMIN_" + Math.floor(Math.random()*9999) + "!";
+                                    crackContent.innerHTML = `<br><span style="color:#00FF66; font-size:18px; text-shadow:0 0 10px #00FF66;">[PASSWORD CRACKED]: ${pass}</span>`;
+                                    els.terminalContent.scrollTop = els.terminalContent.scrollHeight;
+                                    clearInterval(intv);
+                                    resolve();
+                                }
+                            }, 80); // Speed of crack
+                        });
+                    }
+
+                    // 3. SYSINFO COMMAND
+                    else if (cmd === 'sysinfo') {
+                        const cores = navigator.hardwareConcurrency || 'Unknown';
+                        const ram = navigator.deviceMemory || 'Unknown';
+                        const platform = navigator.platform || 'Unknown';
+                        const vendor = navigator.vendor || 'Unknown';
+                        const ua = navigator.userAgent;
+                        const screen = `${window.screen.width}x${window.screen.height}`;
+                        const lang = navigator.language;
+                        
+                        let connInfo = 'Unknown';
+                        if (navigator.connection) {
+                            connInfo = `${navigator.connection.effectiveType.toUpperCase()} (Downlink: ${navigator.connection.downlink}Mbps)`;
+                        }
+
+                        const infoHtml = `
+                            <span style="color:#FFA500;">> OS_PLATFORM:</span> ${platform} [${vendor}]<br>
+                            <span style="color:#FFA500;">> CPU_CORES:</span> ${cores}<br>
+                            <span style="color:#FFA500;">> EST_MEMORY:</span> ${ram} GB<br>
+                            <span style="color:#FFA500;">> DISPLAY_RES:</span> ${screen}<br>
+                            <span style="color:#FFA500;">> SYS_LANG:</span> ${lang}<br>
+                            <span style="color:#FFA500;">> NET_TYPE:</span> ${connInfo}<br>
+                            <span style="color:#FFA500;">> USER_AGENT:</span> <span style="font-size:10px;">${ua}</span>
+                        `;
+                        showCommandResult(`[SYSTEM DIAGNOSTIC COMPLETE]<br><br>${infoHtml}`);
+                    }
+
+                    // 4. NUKE COMMAND
+                    else if (cmd === 'nuke') {
+                        document.documentElement.style.setProperty('--neon', '#FF0033');
+                        document.documentElement.style.setProperty('--neon-dim', 'rgba(255, 0, 51, 0.3)');
+                        document.documentElement.style.setProperty('--neon-glow', 'rgba(255, 0, 51, 0.7)');
+                        
+                        const overlay = document.createElement('div');
+                        overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,0,0,0.15);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FF0033;text-shadow:0 0 20px #FF0033;font-family:monospace;backdrop-filter:blur(3px);";
+                        document.body.appendChild(overlay);
+
+                        let c = 10;
+                        await new Promise(resolve => {
+                            const intv = setInterval(() => {
+                                overlay.innerHTML = `<h1 style="font-size:8vw;margin:0;animation:blink 0.5s infinite;text-align:center;">SYSTEM BREACHED</h1><h2 style="font-size:12vw;margin:0;">${c}</h2>`;
+                                c--;
+                                if(c < 0) {
+                                    clearInterval(intv);
+                                    document.body.innerHTML = '';
+                                    document.body.style.backgroundColor = '#000';
+                                    setTimeout(() => location.reload(), 1500); // Reloads page
+                                    resolve();
+                                }
+                            }, 1000);
+                        });
+                        return; // Keeps it paused
+                    }
+
+                    // 5. EXISTING APIs (myip, gps, weather, qr, calc)
+                    else if (cmd === 'myip') {
                         const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
                         if(!res.ok) throw new Error("Failed to fetch IP data. Network Blocked.");
                         const data = await res.json();
-                        
                         let locationStr = data.city ? `${data.city}, ${data.region}` : 'Unknown Location (ISP Routed)';
                         showCommandResult(`TARGET IP: ${data.ip}<br>NETWORK LOC: ${locationStr}<br>COUNTRY: ${data.country}<br>ISP: ${data.organization}`);
                     } 
                     else if (cmd === 'gps') {
-                        if (!navigator.geolocation) {
-                            throw new Error("Geolocation is not supported by your browser");
-                        }
-                        
+                        if (!navigator.geolocation) throw new Error("Geolocation is not supported by your browser");
                         showCommandResult(`[SYS_API] REQUESTING SATELLITE GPS FIX... PLEASE ALLOW PERMISSION.`, false);
-                        
                         const pos = await new Promise((resolve, reject) => {
                             navigator.geolocation.getCurrentPosition(resolve, reject, {timeout: 10000});
                         });
-                        
                         const lat = pos.coords.latitude;
                         const lon = pos.coords.longitude;
-                        
-                        // Convert Lat/Lng to City name
                         const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
                         const geoData = await geoRes.json();
                         const locName = geoData.locality || geoData.city || geoData.principalSubdivision || 'Unknown';
-                        
                         showCommandResult(`SATELLITE LOCK SECURED<br>LAT: ${lat.toFixed(4)}<br>LON: ${lon.toFixed(4)}<br>EXACT LOCATION: ${locName}, ${geoData.countryName}`);
                     }
                     else if (cmd === 'weather') {
                         const city = fullText.substring(8).trim();
                         if(!city) throw new Error("Location empty. Syntax: weather [city/district]");
-                        
-                        // Fetch lat/lon first (Geocoding API)
                         const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
                         const geoData = await geoRes.json();
                         if(!geoData.results || geoData.results.length === 0) throw new Error(`Location '${city}' not found.`);
-                        
                         const {latitude, longitude, name, country} = geoData.results[0];
-                        
-                        // Fetch actual weather using lat/lon
                         const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
                         const wData = await wRes.json();
-                        
                         showCommandResult(`LOCATION: ${name}, ${country}<br>STATUS: ACTIVE<br>TEMP: ${wData.current_weather.temperature}°C<br>WIND: ${wData.current_weather.windspeed} km/h`);
                     }
                     else if (cmd === 'qr') {
                         const link = fullText.substring(3).trim();
                         if(!link) throw new Error("Link empty. Syntax: qr [url/text]");
-                        
-                        // Direct image link via API
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link)}&color=00FF66&bgcolor=000502`;
-                        
                         showCommandResult(`QR CODE GENERATED FOR: ${link}<br><img src="${qrUrl}" style="margin-top:10px; border:2px solid var(--neon); padding:5px; box-shadow:0 0 15px rgba(0,255,102,0.5);">`);
                     }
                     else if (cmd === 'calc') {
                         const expression = fullText.substring(5).trim();
                         if(!expression) throw new Error("Expression empty. Syntax: calc 4+7");
-                        
-                        // Only allow numbers and basic math symbols for security
                         const sanitizedExp = expression.replace(/[^0-9+\-*/().% ]/g, '');
-                        
-                        if (sanitizedExp !== expression.replace(/\s+/g, '')) {
-                            throw new Error("Invalid math characters found.");
-                        }
-
-                        // Evaluate math
+                        if (sanitizedExp !== expression.replace(/\s+/g, '')) throw new Error("Invalid math characters found.");
                         const result = new Function('return ' + sanitizedExp)();
                         if(result === undefined || Number.isNaN(result)) throw new Error("Invalid calculation");
-                        
                         showCommandResult(`OPERATION: ${sanitizedExp}<br>RESULT: <span style="font-size:22px; color:#00FFFF;">${result}</span>`);
                     }
                 } catch(err) {
@@ -957,14 +1031,6 @@
                     document.getElementById(`bar-${s.id}`).style.width = `${s.val}%`;
                     document.getElementById(`val-${s.id}`).textContent = `${s.val.toFixed(1)}%`;
                 });
-
-                let liveHTML = '';
-                liveMetrics.forEach(m => {
-                    const val = (m === 'PING' || m === 'FPS' || m === 'TEMP') ? rand(20, 99) : 
-                                (m === 'FIREWALL') ? 'ACTIVE' : rHex(4);
-                    liveHTML += `<div style="display:flex; justify-content:space-between;"><span>${m}</span><span>${val}</span></div>`;
-                });
-                els.liveData.innerHTML = liveHTML;
 
                 let hexLines = '';
                 for(let i=0; i<8; i++) hexLines += `0x${rHex(4)}  ${rHex(4)} ${rHex(4)} ${rHex(4)} ${rHex(4)}<br>`;
