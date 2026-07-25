@@ -394,35 +394,26 @@
 
         /* EXTREME Nuke Animations */
         @keyframes nightmareShake {
-            0% { transform: translate(0, 0) scale(1) skew(0deg); }
-            10% { transform: translate(-20px, 15px) scale(1.05) skew(2deg); filter: hue-rotate(90deg); }
-            20% { transform: translate(25px, -20px) scale(0.95) skew(-3deg); filter: invert(100%); }
-            30% { transform: translate(-35px, 25px) scale(1.1) skew(5deg); filter: contrast(200%); }
-            40% { transform: translate(30px, -15px) scale(0.9) skew(-5deg); filter: hue-rotate(-90deg); }
-            50% { transform: translate(-10px, 30px) scale(1.15) skew(3deg); filter: invert(100%); }
-            60% { transform: translate(40px, -30px) scale(0.85) skew(-4deg); filter: contrast(300%); }
-            70% { transform: translate(-25px, 20px) scale(1.05) skew(2deg); filter: hue-rotate(180deg); }
-            80% { transform: translate(20px, -25px) scale(0.95) skew(-2deg); filter: invert(100%); }
-            90% { transform: translate(-15px, 10px) scale(1.1) skew(4deg); filter: sepia(100%); }
-            100% { transform: translate(0, 0) scale(1) skew(0deg); filter: none; }
+            0% { transform: translate(5px, 5px) rotate(0deg); }
+            10% { transform: translate(-5px, -10px) rotate(-1deg); }
+            20% { transform: translate(-10px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 10px) rotate(0deg); }
+            40% { transform: translate(5px, -5px) rotate(1deg); }
+            50% { transform: translate(-5px, 10px) rotate(-1deg); }
+            60% { transform: translate(-10px, 5px) rotate(0deg); }
+            70% { transform: translate(10px, 5px) rotate(-1deg); }
+            80% { transform: translate(-5px, -5px) rotate(1deg); }
+            90% { transform: translate(5px, 10px) rotate(0deg); }
+            100% { transform: translate(5px, -10px) rotate(-1deg); }
         }
         
         @keyframes extremeStrobe {
-            0% { background: #FF0000; color: #FFF; }
-            20% { background: #000; color: #FF0000; }
-            40% { background: #FFF; color: #000; }
-            60% { background: #FF0000; color: #000; }
-            80% { background: #000; color: #FFF; }
-            100% { background: #FF0000; color: #FFF; }
-        }
-
-        @keyframes glitchText {
-            0% { clip-path: inset(10% 0 80% 0); transform: translate(-5px, 2px); }
-            20% { clip-path: inset(80% 0 5% 0); transform: translate(5px, -5px); }
-            40% { clip-path: inset(40% 0 20% 0); transform: translate(-5px, 5px); }
-            60% { clip-path: inset(20% 0 60% 0); transform: translate(5px, 2px); }
-            80% { clip-path: inset(60% 0 10% 0); transform: translate(-2px, -5px); }
-            100% { clip-path: inset(30% 0 50% 0); transform: translate(2px, 5px); }
+            0% { background: #220000; color: #FFF; }
+            20% { background: #FF0000; color: #000; }
+            40% { background: #550000; color: #FFF; }
+            60% { background: #000000; color: #FF0000; }
+            80% { background: #FF0000; color: #FFF; }
+            100% { background: #110000; color: #FF0000; }
         }
 
         /* =========================================
@@ -524,7 +515,7 @@
     <div id="scanline"></div>
 
     <!-- MAIN HUD -->
-    <div id="hud-container">
+    <div id="hud-container" style="transition: opacity 0.5s;">
         
         <!-- HEADER -->
         <header>
@@ -649,6 +640,7 @@
             
             // DOM Elements
             const els = {
+                hudContainer: document.getElementById('hud-container'),
                 terminal: document.getElementById('main-terminal'),
                 terminalContent: document.querySelector('#center-panel .panel-content'),
                 activity: document.getElementById('activity-logs'),
@@ -687,7 +679,7 @@
                 "THREAD CREATED - ID:", "LISTENING ON PORT", "SYSTEM READY"
             ];
 
-            // Terrifying Red Alert Klaxon Siren
+            // Loud Klaxon Siren (For Countdown)
             function playKlaxonSiren() {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -697,12 +689,11 @@
                     const gain = audioCtx.createGain();
                     
                     osc.type = 'sawtooth';
-                    // Alternate between two harsh frequencies
                     osc.frequency.setValueAtTime(600, audioCtx.currentTime);
                     osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.4);
                     osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.8);
                     
-                    gain.gain.setValueAtTime(0.8, audioCtx.currentTime); 
+                    gain.gain.setValueAtTime(1, audioCtx.currentTime); 
                     
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
@@ -711,19 +702,18 @@
                 } catch(e) {}
             }
 
-            // Extreme Glitch and Destructive Noise Generator
+            // Extreme Glitch and Destructive Noise Generator (For 15s Crash)
             function playFatalGlitchNoise(durationMs) {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContext) return;
                     const audioCtx = new AudioContext();
                     
-                    // Main harsh distortion generator
                     const osc1 = audioCtx.createOscillator(); osc1.type = 'square';
                     const osc2 = audioCtx.createOscillator(); osc2.type = 'sawtooth';
                     const gain = audioCtx.createGain();
                     
-                    gain.gain.value = 1.0; // Very Loud
+                    gain.gain.value = 0.8; // Very Loud
                     
                     osc1.connect(gain);
                     osc2.connect(gain);
@@ -732,7 +722,6 @@
                     osc1.start();
                     osc2.start();
                     
-                    // Rapidly change frequencies to simulate hardware melting
                     const noiseIntv = setInterval(() => {
                         if (audioCtx.state === 'closed') {
                             clearInterval(noiseIntv);
@@ -742,7 +731,7 @@
                                 osc2.frequency.setValueAtTime(Math.random() * 500 + 20, audioCtx.currentTime);
                             } catch(e){}
                         }
-                    }, 30);
+                    }, 40);
 
                     setTimeout(() => {
                         clearInterval(noiseIntv);
@@ -964,13 +953,13 @@
                         showCommandResult(`[SYSTEM DIAGNOSTIC COMPLETE]<br><br>${infoHtml}`);
                     }
                     else if (cmd === 'nuke') {
-                        // EXTREME NUKE SEQUENCE
+                        // PRE-NUKE COLOR CHANGE
                         document.documentElement.style.setProperty('--neon', '#FF0033');
                         document.documentElement.style.setProperty('--neon-dim', 'rgba(255, 0, 51, 0.3)');
                         document.documentElement.style.setProperty('--neon-glow', 'rgba(255, 0, 51, 0.7)');
                         
                         const overlay = document.createElement('div');
-                        overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,0,0,0.15);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FF0033;text-shadow:0 0 20px #FF0033;font-family:monospace;backdrop-filter:blur(3px);";
+                        overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(50,0,0,0.5);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FF0033;text-shadow:0 0 20px #FF0033;font-family:monospace;backdrop-filter:blur(3px);";
                         document.body.appendChild(overlay);
 
                         let c = 10;
@@ -978,61 +967,82 @@
                             const countIntv = setInterval(() => {
                                 if (c > 0) {
                                     overlay.innerHTML = `<h1 style="font-size:8vw;margin:0;animation:blink 0.5s infinite;text-align:center;">SYSTEM BREACHED</h1><h2 style="font-size:15vw;margin:0;">${c}</h2>`;
-                                    playKlaxonSiren(); // Loud 2-tone siren
+                                    playKlaxonSiren(); 
                                 }
                                 c--;
                                 if(c < 0) {
                                     clearInterval(countIntv);
                                     
-                                    // 10 SECONDS OF ABSOLUTE TERROR
-                                    playFatalGlitchNoise(10000); 
+                                    // HIDE ENTIRE HUD SO IT LOOKS LIKE A TRUE CRASH
+                                    els.hudContainer.style.display = 'none';
+                                    document.getElementById('control-box').style.display = 'none';
 
-                                    // Extreme shaking of the entire body
-                                    document.body.style.animation = "nightmareShake 0.15s infinite";
+                                    // 15 SECONDS OF ABSOLUTE TERROR
+                                    playFatalGlitchNoise(15000); 
+
+                                    document.body.style.animation = "nightmareShake 0.1s infinite";
                                     
-                                    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;font-family:monospace;font-size:24px;overflow:hidden;word-break:break-all;animation:extremeStrobe 0.1s infinite;padding:20px;text-align:center;";
+                                    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background-color:#550000;color:#FFF;font-family:'Courier New', monospace;overflow:hidden;animation:extremeStrobe 0.15s infinite;";
                                     
-                                    // Layered Glitch Text effect
-                                    const glitchWords = ["FATAL ERROR", "0xDEADBEEF", "SYSTEM CORRUPTED", "☠️", "☣️", "MEMORY LEAK", "HARDWARE FAILURE", "0101010101"];
-                                    
+                                    // Massive Skull in background
+                                    const skull = document.createElement('div');
+                                    skull.innerHTML = "☠️";
+                                    skull.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80vw;opacity:0.2;color:#000;";
+                                    overlay.appendChild(skull);
+
+                                    // Fast scrolling text container
+                                    const crashTerm = document.createElement('div');
+                                    crashTerm.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;padding:20px;font-size:16px;line-height:1.2;text-align:left;color:#FFaaaa;text-shadow:none;box-sizing:border-box;";
+                                    overlay.appendChild(crashTerm);
+
+                                    // Flashing Giant Text
+                                    const flashText = document.createElement('div');
+                                    flashText.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:8vw;font-weight:900;color:#FFF;text-shadow:0 0 30px #F00, 0 0 50px #F00;text-align:center;width:100%;mix-blend-mode:difference;animation:blink 0.1s infinite;";
+                                    overlay.appendChild(flashText);
+
+                                    const scaryPhrases = ["FATAL KERNEL PANIC", "OVERVOLTING CPU...", "MEMORY CORRUPTION DETECTED", "WIPING BOOT SECTOR", "DELETING SYSTEM32", "HARDWARE MELTDOWN IMMINENT", "RANSOMWARE ENCRYPTION ACTIVE", "DATA EXFILTRATION 100%"];
+                                    const hexChars = "0123456789ABCDEF";
+
                                     let dumpIntv = setInterval(() => {
-                                        let content = `<div style="position:absolute; width:100%; height:100%; opacity:0.8; animation:glitchText 0.2s infinite; color:cyan; top:2px; left:3px; z-index:1;">`;
-                                        let baseText = "";
-                                        for(let i=0; i<80; i++) {
-                                            baseText += glitchWords[Math.floor(Math.random() * glitchWords.length)] + " ";
+                                        // Terminal Dump
+                                        let dump = "";
+                                        for(let i=0; i<15; i++) {
+                                            let hexLine = "0x";
+                                            for(let j=0; j<16; j++) hexLine += hexChars[Math.floor(Math.random()*16)];
+                                            dump += `${hexLine} : <span style="color:#FFF;">${scaryPhrases[Math.floor(Math.random()*scaryPhrases.length)]}</span> <br>`;
                                         }
-                                        if(Math.random() > 0.4) {
-                                            baseText += `<br><span style="font-size:${Math.random()*15 + 8}vw; line-height:1; font-weight:900;">MELTDOWN</span><br>`;
-                                        }
-                                        content += baseText + `</div>`;
-                                        content += `<div style="position:absolute; width:100%; height:100%; opacity:0.8; animation:glitchText 0.3s infinite reverse; color:red; top:-2px; left:-3px; z-index:2;">${baseText}</div>`;
-                                        content += `<div style="position:relative; z-index:3;">${baseText}</div>`;
+                                        crashTerm.innerHTML += dump;
+                                        crashTerm.scrollTop = crashTerm.scrollHeight;
                                         
-                                        overlay.innerHTML = content;
-                                    }, 80);
+                                        if(crashTerm.childNodes.length > 50) {
+                                            crashTerm.innerHTML = ""; 
+                                        }
 
-                                    // RESET AFTER 10 SECONDS OF TERROR
+                                        // Flashing Center Text
+                                        if(Math.random() > 0.4) {
+                                            flashText.innerHTML = scaryPhrases[Math.floor(Math.random()*scaryPhrases.length)];
+                                        }
+                                    }, 60);
+
+                                    // RESET AFTER 15 SECONDS
                                     setTimeout(() => {
                                         clearInterval(dumpIntv);
                                         document.body.style.animation = "";
                                         overlay.style.animation = "";
                                         overlay.style.background = "#000";
-                                        overlay.style.color = "#00FF66";
-                                        overlay.style.textShadow = "0 0 10px #00FF66";
-                                        overlay.style.display = "flex";
-                                        overlay.style.alignItems = "center";
-                                        overlay.style.justifyContent = "center";
-                                        overlay.innerHTML = `<h2 style="font-size:4vw; animation:blink 1s infinite;">REBOOTING SEC-NET OS...</h2>`;
+                                        overlay.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#00FF66;text-shadow:0 0 10px #00FF66;font-size:24px;text-align:center;"><div style="animation:blink 1s infinite;">_</div><br><br>REBOOTING SEC-NET OS...<br>RESTORING KERNEL... OK</div>`;
                                         
                                         setTimeout(() => {
                                             overlay.remove();
+                                            els.hudContainer.style.display = 'grid'; // Restore HUD
+                                            document.getElementById('control-box').style.display = 'flex'; // Restore Control Box
                                             document.documentElement.style.setProperty('--neon', '#00FF66');
                                             document.documentElement.style.setProperty('--neon-dim', 'rgba(0, 255, 102, 0.3)');
                                             document.documentElement.style.setProperty('--neon-glow', 'rgba(0, 255, 102, 0.7)');
                                             clearTerminal();
                                             resolve();
-                                        }, 3000); // 3 seconds of silent rebooting
-                                    }, 10000); // 10 seconds of terrifying chaos
+                                        }, 4000); 
+                                    }, 15000); // 15 seconds of chaos
                                 }
                             }, 1000);
                         });
