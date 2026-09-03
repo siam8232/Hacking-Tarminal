@@ -812,7 +812,8 @@
                 context.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
                 return { cvs, ctx: context, w: rect.width, h: rect.height };
             }
-
+function toggleFullscreen() {
+    const elem = document.documentElement;
             window.addEventListener('resize', () => {
                 Object.keys(ctx).forEach(k => {
                     if(!ctx[k]) return;
