@@ -2,14 +2,564 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SEC-NET // HUD SYSTEM</title>
-
     <style>
-        /* তোমার আগের সম্পূর্ণ CSS এখানে অপরিবর্তিত */
+        /* =========================================
+           VARIABLES & RESET
+           ========================================= */
+        :root {
+            --neon: #00FF66;
+            --neon-dim: rgba(0, 255, 102, 0.3);
+            --neon-glow: rgba(0, 255, 102, 0.7);
+            --bg: #000502;
+            --panel-bg: rgba(0, 20, 5, 0.75);
+            --font-main: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg);
+            color: var(--neon);
+            font-family: var(--font-main);
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        /* =========================================
+           BACKGROUND & CRT EFFECTS
+           ========================================= */
+        #grid-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(var(--neon-dim) 1px, transparent 1px),
+                linear-gradient(90deg, var(--neon-dim) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.15;
+            z-index: 0;
+            animation: panGrid 20s linear infinite;
+        }
+
+        #crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+
+        #scanline {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 10px;
+            background: var(--neon);
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 9998;
+            animation: scan 6s linear infinite;
+        }
+
+        /* =========================================
+           LAYOUT & PANELS
+           ========================================= */
+        #hud-container {
+            position: relative;
+            z-index: 10;
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 60px 1fr 200px;
+            gap: 15px;
+            padding: 15px;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .panel {
+            border: 1px solid var(--neon-dim);
+            background: var(--panel-bg);
+            box-shadow: inset 0 0 15px rgba(0, 255, 102, 0.05), 0 0 10px rgba(0, 255, 102, 0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 15px; height: 15px;
+            border-top: 2px solid var(--neon);
+            border-left: 2px solid var(--neon);
+        }
+
+        .panel::after {
+            content: '';
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 15px; height: 15px;
+            border-bottom: 2px solid var(--neon);
+            border-right: 2px solid var(--neon);
+        }
+
+        .panel-header {
+            font-size: 12px;
+            letter-spacing: 2px;
+            padding: 5px 10px;
+            border-bottom: 1px solid var(--neon-dim);
+            background: rgba(0, 255, 102, 0.1);
+            text-transform: uppercase;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .panel-content {
+            padding: 10px;
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+
+        .panel-content::-webkit-scrollbar { display: none; }
+
+        /* =========================================
+           SPECIFIC SECTIONS
+           ========================================= */
+
+        /* Header */
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--neon-dim);
+            padding: 0 20px;
+            background: var(--panel-bg);
+            box-shadow: 0 0 10px var(--neon-dim);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px var(--neon);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .waveform-mini {
+            width: 150px;
+            height: 30px;
+        }
+
+        .header-controls button {
+            background: transparent;
+            border: 1px solid var(--neon);
+            color: var(--neon);
+            padding: 8px 15px;
+            font-family: inherit;
+            cursor: pointer;
+            margin-left: 10px;
+            text-transform: uppercase;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .header-controls button:hover {
+            background: var(--neon);
+            color: var(--bg);
+            box-shadow: 0 0 15px var(--neon);
+        }
+
+        /* Left Panel - System Stats */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 12px;
+        }
+
+        .stat-label { width: 50px; }
+
+        .stat-bar-container {
+            flex-grow: 1;
+            height: 10px;
+            border: 1px solid var(--neon-dim);
+            margin: 0 10px;
+            position: relative;
+        }
+
+        .stat-bar {
+            height: 100%;
+            background: var(--neon);
+            width: 0%;
+            box-shadow: 0 0 5px var(--neon);
+            transition: width 0.3s ease;
+        }
+
+        .stat-val { width: 60px; text-align: right; }
+
+        .circular-indicators {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .circle-canvas { width: 100px; height: 100px; }
+
+        /* Center Panel - Main Terminal */
+        #main-terminal {
+            font-size: 13px;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            min-height: 100%;
+            word-wrap: break-word;
+            padding-bottom: 20px;
+        }
+
+        .log-line {
+            margin-bottom: 3px;
+            display: block;
+            transition: all 0.3s;
+        }
+
+        .log-time { color: #888; margin-right: 10px; }
+        .log-type-INFO { color: var(--neon); }
+        .log-type-WARN { color: #FFA500; }
+        .log-type-ERR { color: #FF0033; }
+        .log-type-SUCC { color: #00FFFF; }
+
+        /* Custom Highlighted Log */
+        .log-line.custom-highlight {
+            font-size: 15px;
+            color: #FFFFFF;
+            text-shadow: 0 0 8px #FFA500;
+            font-weight: bold;
+            background: rgba(255, 165, 0, 0.15);
+            border-left: 4px solid #FFA500;
+            padding: 10px 12px;
+            margin: 10px 0;
+            letter-spacing: 1px;
+            box-shadow: inset 0 0 10px rgba(255, 165, 0, 0.1);
+        }
+        
+        .log-line.api-result {
+            border-left: 4px solid var(--neon);
+            background: rgba(0, 255, 102, 0.1);
+            text-shadow: 0 0 8px var(--neon);
+        }
+
+        .log-line.api-error {
+            border-left: 4px solid #FF0033;
+            background: rgba(255, 0, 51, 0.15);
+            text-shadow: 0 0 8px #FF0033;
+        }
+
+        .log-line.custom-highlight .log-time {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1em;
+            background-color: var(--neon);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+        }
+
+        .log-line.custom-highlight .typing-cursor {
+            background-color: #FFFFFF;
+            box-shadow: 0 0 8px #FFA500;
+        }
+
+        /* Right Panel - Analysis */
+        .hex-dump {
+            font-size: 11px;
+            line-height: 1.5;
+            color: rgba(0, 255, 102, 0.8);
+            margin-bottom: 20px;
+        }
+
+        #radar-canvas {
+            width: 100%;
+            aspect-ratio: 1/1;
+            margin: 10px 0;
+        }
+
+        .threat-level {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        /* Bottom Panel - Activity */
+        footer {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr 300px;
+            gap: 15px;
+        }
+
+        .wave-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        canvas.full-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Floating Custom Control Box */
+        #control-box {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 320px;
+            background: rgba(0, 10, 5, 0.95);
+            border: 1px solid var(--neon);
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
+            z-index: 100;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            transition: opacity 0.3s;
+        }
+
+        #control-box:hover { opacity: 1; }
+
+        #control-box h3 {
+            font-size: 14px;
+            border-bottom: 1px solid var(--neon-dim);
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+
+        #custom-input {
+            width: 100%;
+            height: 80px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--neon-dim);
+            color: var(--neon);
+            font-family: inherit;
+            padding: 5px;
+            resize: none;
+            outline: none;
+        }
+
+        #custom-input:focus {
+            border-color: var(--neon);
+            box-shadow: 0 0 5px var(--neon);
+        }
+
+        .ctrl-btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .ctrl-btn {
+            background: transparent;
+            border: 1px solid var(--neon);
+            color: var(--neon);
+            padding: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .ctrl-btn:hover { background: var(--neon); color: var(--bg); }
+        .ctrl-btn.active { background: #FFA500; border-color: #FFA500; color: #000; }
+
+        /* =========================================
+           ANIMATIONS & EXTREME TERRIFYING EFFECTS
+           ========================================= */
+
+        @keyframes panGrid {
+            from { background-position: 0 0; }
+            to { background-position: 40px 40px; }
+        }
+
+        @keyframes scan {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { text-shadow: 0 0 5px var(--neon); }
+            50% { text-shadow: 0 0 20px var(--neon), 0 0 30px var(--neon); }
+        }
+
+        /* EXTREME Nuke Animations */
+        @keyframes nightmareShake {
+            0% { transform: translate(5px, 5px) rotate(0deg); }
+            10% { transform: translate(-5px, -10px) rotate(-1deg); }
+            20% { transform: translate(-10px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 10px) rotate(0deg); }
+            40% { transform: translate(5px, -5px) rotate(1deg); }
+            50% { transform: translate(-5px, 10px) rotate(-1deg); }
+            60% { transform: translate(-10px, 5px) rotate(0deg); }
+            70% { transform: translate(10px, 5px) rotate(-1deg); }
+            80% { transform: translate(-5px, -5px) rotate(1deg); }
+            90% { transform: translate(5px, 10px) rotate(0deg); }
+            100% { transform: translate(5px, -10px) rotate(-1deg); }
+        }
+        
+        @keyframes extremeStrobe {
+            0% { background: #220000; color: #FFF; }
+            20% { background: #FF0000; color: #000; }
+            40% { background: #000000; color: #FFF; }
+            60% { background: #110000; color: #FF0000; }
+            80% { background: #000; color: #FFF; }
+            100% { background: #FF0000; color: #FFF; }
+        }
+
+        /* =========================================
+           PREMIUM BRANDING
+           ========================================= */
+        .sys-branding {
+            position: absolute;
+            top: 35px; 
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 15, 5, 0.85);
+            border: 1px solid var(--neon-dim);
+            border-top: 2px solid var(--neon);
+            border-bottom: 2px solid var(--neon);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 20px rgba(0, 255, 102, 0.2), inset 0 0 15px rgba(0, 255, 102, 0.1);
+            padding: 15px 40px;
+            text-align: center;
+            z-index: 50; 
+            pointer-events: none; 
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            animation: brandPulseGlow 3s infinite alternate;
+            white-space: nowrap;
+        }
+
+        .sys-branding::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--neon);
+            opacity: 0.5;
+            box-shadow: 0 0 10px var(--neon);
+            animation: brandScan 3s linear infinite;
+        }
+
+        .brand-title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 8px;
+            text-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon);
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            animation: brandTextFlicker 6s infinite;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--neon);
+            letter-spacing: 6px;
+            text-shadow: 0 0 5px var(--neon);
+            text-transform: uppercase;
+            opacity: 0.9;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        @keyframes brandPulseGlow {
+            0% { box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 20px rgba(0, 255, 102, 0.1), inset 0 0 15px rgba(0, 255, 102, 0.05); }
+            100% { box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 35px rgba(0, 255, 102, 0.4), inset 0 0 25px rgba(0, 255, 102, 0.2); }
+        }
+
+        @keyframes brandTextFlicker {
+            0%, 19%, 21%, 100% { opacity: 1; text-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon); }
+            20% { opacity: 0.4; text-shadow: none; }
+        }
+
+        @keyframes brandScan {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            #hud-container { grid-template-columns: 250px 1fr 250px; }
+        }
+
+        @media (max-width: 992px) {
+            #hud-container {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto auto auto;
+                overflow-y: auto;
+            }
+
+            header { grid-column: 1 / -1; }
+            #left-panel { grid-column: 1 / 2; }
+            #right-panel { grid-column: 2 / 3; }
+            #center-panel { grid-column: 1 / -1; height: 400px; }
+            footer {
+                grid-column: 1 / -1;
+                grid-template-columns: 1fr;
+                height: 600px;
+            }
+            #control-box { bottom: 10px; right: 10px; width: 280px; }
+        }
+
+        @media (max-width: 600px) {
+            #hud-container {
+                grid-template-columns: 1fr;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .panel { min-height: 300px; }
+            #control-box {
+                position: static;
+                width: 100%;
+                margin-top: 20px;
+            }
+        }
     </style>
 </head>
-
 <body>
 
     <!-- BACKGROUND HACKING AUDIO -->
@@ -17,53 +567,2028 @@
         <source src="./hacking-bg.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- তোমার আগের সম্পূর্ণ HTML interface এখানে অপরিবর্তিত -->
+    <!-- OVERLAYS -->
+    <div id="grid-bg"></div>
+    <div id="crt-overlay"></div>
+    <div id="scanline"></div>
 
+    <!-- MAIN HUD -->
+    <div id="hud-container" style="transition: opacity 0.5s;">
+        
+        <!-- HEADER -->
+        <header>
+            <div class="logo">
+                <span>VISUAL-NINE</span>
+                <canvas id="header-wave" class="waveform-mini"></canvas>
+            </div>
+
+            <div class="header-controls">
+                <span id="clock-display" style="margin-right: 20px;">00:00:00</span>
+                <button id="btn-fs-enter" onclick="sys.toggleFullscreen()">ENTER FULLSCREEN</button>
+                <button id="btn-fs-exit" onclick="sys.exitFullscreen()">EXIT FULLSCREEN</button>
+            </div>
+        </header>
+
+        <!-- LEFT PANEL : SYSTEM STATS & SECRET COMMANDS -->
+        <aside class="panel" id="left-panel">
+            <div class="panel-header">SYS_RESOURCES</div>
+
+            <div class="panel-content">
+                <div id="stat-gauges"></div>
+
+                <div class="circular-indicators">
+                    <canvas id="fan1" class="circle-canvas"></canvas>
+                    <canvas id="fan2" class="circle-canvas"></canvas>
+                </div>
+                
+                <!-- LIVE DATA -->
+                <div style="margin-top:15px;">
+                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px;">LIVE DATA</div>
+                    <div id="live-data-list" style="font-size:11px; line-height: 1.6; color:var(--neon-dim);"></div>
+                </div>
+
+                <!-- IMPROVED AND BOLDER COMMAND LIST -->
+                <div style="margin-top:15px; border-top: 1px dashed var(--neon-dim); padding-top:10px;">
+                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:10px; color:#FFA500; font-size:13px; letter-spacing:3px;">AVAILABLE COMMANDS //</div>
+
+                    <div style="font-size:12px; line-height: 1.8; color:#FFF; font-family: var(--font-main);">
+                        
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> myip / gps</span> 
+                            <span style="color:#FFF;">Net/Loc Scan</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> weather [loc]</span> 
+                            <span style="color:#FFF;">Live Weather</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> speak [msg]</span> 
+                            <span style="color:#FFF;">Robotic Voice</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> qr [link]</span> 
+                            <span style="color:#FFF;">Generate QR</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> calc [math]</span> 
+                            <span style="color:#FFF;">Calculator</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> scan [url]</span> 
+                            <span style="color:#FFF;">Port Scanner</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> crack [usr]</span> 
+                            <span style="color:#FFF;">Brute-Force</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; border-bottom: 1px solid rgba(0,255,102,0.2); padding-bottom:3px; margin-bottom:3px;">
+                            <span style="color:var(--neon); font-weight:bold; text-shadow: 0 0 8px var(--neon);">> sysinfo</span> 
+                            <span style="color:#FFF;">Device Data</span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; padding-bottom:3px;">
+                            <span style="color:#FF0033; font-weight:bold; text-shadow: 0 0 10px #FF0033;">> nuke</span> 
+                            <span style="color:#FF9999;">Self Destruct</span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER PANEL : TERMINAL -->
+        <section class="panel" id="center-panel">
+            <div class="panel-header">
+                <span>TERMINAL_ROOT@SYS</span>
+                <span id="term-status">STATUS: ACTIVE</span>
+            </div>
+
+            <!-- PREMIUM BRANDING -->
+            <div class="sys-branding">
+                <div class="brand-title">Hacker Zone</div>
+                <div class="brand-sub">Powered by Siam Islam</div>
+            </div>
+
+            <div class="panel-content" id="main-terminal">
+                <!-- Logs injected by JS -->
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL : ANALYSIS & RADAR -->
+        <aside class="panel" id="right-panel">
+            <div class="panel-header">ANALYSIS_CORE</div>
+
+            <div class="panel-content">
+                <canvas id="radar-canvas"></canvas>
+
+                <div class="threat-level" id="threat-indicator">
+                    THREAT: LOW
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <div class="panel-header" style="background:transparent; padding:0; border:none; margin-bottom:5px;">MEM_DUMP</div>
+                    <div class="hex-dump" id="hex-dump-container"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- BOTTOM PANEL : WAVEFORMS & LOGS -->
+        <footer>
+            <div class="panel">
+                <div class="panel-header">FREQ_ANALYZER_01</div>
+                <div class="panel-content wave-container">
+                    <canvas id="wave1" class="full-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">FREQ_ANALYZER_02</div>
+                <div class="panel-content wave-container">
+                    <canvas id="wave2" class="full-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">ACTIVITY_STATUS</div>
+                <div class="panel-content" id="activity-logs" style="font-size: 11px; line-height: 1.5; overflow: hidden;"></div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- CUSTOM CONTROL BOX -->
+    <div id="control-box">
+        <h3>INJECT PAYLOAD // COMMAND HUB</h3>
+
+        <textarea
+            id="custom-input"
+            placeholder="Initiate command via Alt+Enter or Shift+Enter..."
+        ></textarea>
+
+        <div class="ctrl-btn-group">
+            <button class="ctrl-btn" onclick="sys.injectCustomText()" title="Shortcut: Alt or Shift + Enter">
+                ADD TEXT
+            </button>
+
+            <button class="ctrl-btn" onclick="sys.clearCustomText()" title="Shortcut: Alt or Shift + C">
+                CLEAR
+            </button>
+
+            <button class="ctrl-btn" id="btn-pause" onclick="sys.togglePause()" title="Shortcut: Alt or Shift + P">
+                PAUSE
+            </button>
+
+            <button class="ctrl-btn" onclick="sys.clearTerminal()" title="Shortcut: Alt or Shift + S">
+                WIPE LOGS
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT -->
     <script>
+        const sys = (function() {
+            // State
+            let isPaused = false;
+            let customQueue = [];
+            let isTypingCustom = false;
+            
+            // DOM Elements
+            const els = {
+                hudContainer: document.getElementById('hud-container'),
+                terminal: document.getElementById('main-terminal'),
+                terminalContent: document.querySelector('#center-panel .panel-content'),
+                activity: document.getElementById('activity-logs'),
+                statGauges: document.getElementById('stat-gauges'),
+                liveData: document.getElementById('live-data-list'),
+                hexDump: document.getElementById('hex-dump-container'),
+                threat: document.getElementById('threat-indicator'),
+                customInput: document.getElementById('custom-input'),
+                btnPause: document.getElementById('btn-pause'),
+                clock: document.getElementById('clock-display')
+            };
 
-        /* তোমার আগের সম্পূর্ণ JavaScript এখানে অপরিবর্তিত */
+            const ctx = {
+                headerWave: initCanvas('header-wave'),
+                fan1: initCanvas('fan1'),
+                fan2: initCanvas('fan2'),
+                radar: initCanvas('radar-canvas'),
+                wave1: initCanvas('wave1'),
+                wave2: initCanvas('wave2')
+            };
 
-        // BACKGROUND HACKING AUDIO
-        const backgroundAudio = document.getElementById('hacking-bg-audio');
-        let backgroundAudioStarted = false;
+            const stats = [
+                { id: 'CPU', val: 0 },
+                { id: 'MEM', val: 0 },
+                { id: 'GPU', val: 0 },
+                { id: 'SSD', val: 0 },
+                { id: 'NET', val: 0 }
+            ];
 
-        function startBackgroundAudio() {
-            if (!backgroundAudio || backgroundAudioStarted) return;
+            const liveMetrics = [
+                'TEMP',
+                'VOLT',
+                'FPS',
+                'PING',
+                'UPLINK',
+                'DWNLINK'
+            ];
+            
+            const logTypes = ['INFO', 'WARN', 'ERR', 'SUCC'];
 
-            backgroundAudio.volume = 0.35;
+            const logMessages = [
+                "INITIALIZING KERNEL MODULES...",
+                "SCANNING PORT RANGE 0-65535",
+                "AUTHENTICATING SECURE HANDSHAKE",
+                "ACCESS GRANTED - ROOT PRIVILEGES",
+                "ACCESS DENIED - RETRYING...",
+                "PACKET RECEIVED FROM UNKNOWN SOURCE",
+                "ENCRYPTING DATA STREAM [AES-256]",
+                "DECRYPTING PAYLOAD...",
+                "LOADING AI NEURAL NET MODULE",
+                "FIREWALL ENABLED - STRICT MODE",
+                "THREAD CREATED - ID:",
+                "LISTENING ON PORT",
+                "SYSTEM READY"
+            ];
 
-            const playPromise = backgroundAudio.play();
+            // IMPROVED Robotic Voice Function (Bengali/English)
+            function robotSpeak(text) {
+                if (!window.speechSynthesis) return;
 
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    backgroundAudioStarted = true;
-                }).catch(() => {
-                    // Browser autoplay policy may require a user interaction.
+                window.speechSynthesis.cancel();
+
+                const msg = new SpeechSynthesisUtterance(text);
+                msg.pitch = 0.6;
+                msg.rate = 0.9;
+                msg.volume = 1.0;
+                
+                const isBengali = /[\u0980-\u09FF]/.test(text);
+                const voices = window.speechSynthesis.getVoices();
+
+                if (isBengali) {
+                    const bnVoice =
+                        voices.find(v => v.lang.includes('bn-BD')) ||
+                        voices.find(v => v.lang.includes('bn-IN')) ||
+                        voices.find(v => v.lang.startsWith('bn'));
+
+                    if (bnVoice) {
+                        msg.voice = bnVoice;
+                    } else {
+                        msg.lang = 'bn-BD';
+                    }
+                } else {
+                    msg.lang = 'en-US';
+                }
+
+                window.speechSynthesis.speak(msg);
+            }
+
+            // Loud Klaxon Siren (For Countdown)
+            function playKlaxonSiren() {
+                try {
+                    const AudioContext =
+                        window.AudioContext ||
+                        window.webkitAudioContext;
+
+                    if (!AudioContext) return;
+
+                    const audioCtx = new AudioContext();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+
+                    osc.type = 'sawtooth';
+
+                    osc.frequency.setValueAtTime(
+                        600,
+                        audioCtx.currentTime
+                    );
+
+                    osc.frequency.setValueAtTime(
+                        800,
+                        audioCtx.currentTime + 0.4
+                    );
+
+                    gain.gain.setValueAtTime(
+                        1,
+                        audioCtx.currentTime
+                    );
+
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.start();
+
+                    setTimeout(() => {
+                        osc.stop();
+                        audioCtx.close();
+                    }, 900);
+
+                } catch(e) {}
+            }
+
+            // Fatal Glitch Noise Generator
+            function playFatalGlitchNoise(durationMs) {
+                try {
+                    const AudioContext =
+                        window.AudioContext ||
+                        window.webkitAudioContext;
+
+                    if (!AudioContext) return;
+
+                    const audioCtx = new AudioContext();
+
+                    const osc1 = audioCtx.createOscillator();
+                    osc1.type = 'square';
+
+                    const osc2 = audioCtx.createOscillator();
+                    osc2.type = 'sawtooth';
+
+                    const gain = audioCtx.createGain();
+                    gain.gain.value = 0.8;
+
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc1.start();
+                    osc2.start();
+
+                    const noiseIntv = setInterval(() => {
+                        if (audioCtx.state === 'closed') {
+                            clearInterval(noiseIntv);
+                        } else {
+                            try {
+                                osc1.frequency.setValueAtTime(
+                                    Math.random() * 2000 + 100,
+                                    audioCtx.currentTime
+                                );
+
+                                osc2.frequency.setValueAtTime(
+                                    Math.random() * 500 + 20,
+                                    audioCtx.currentTime
+                                );
+                            } catch(e){}
+                        }
+                    }, 40);
+
+                    setTimeout(() => {
+                        clearInterval(noiseIntv);
+                        osc1.stop();
+                        osc2.stop();
+                        audioCtx.close();
+                    }, durationMs);
+
+                } catch(e) {}
+            }
+
+            function rand(min, max) {
+                return Math.floor(
+                    Math.random() * (max - min + 1)
+                ) + min;
+            }
+
+            function randFloat(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            function rHex(len=4) {
+                return Math.floor(
+                    Math.random() * Math.pow(16, len)
+                )
+                .toString(16)
+                .toUpperCase()
+                .padStart(len, '0');
+            }
+
+            function rIP() {
+                return `${rand(1,255)}.${rand(0,255)}.${rand(0,255)}.${rand(1,255)}`;
+            }
+
+            function rMAC() {
+                return Array
+                    .from({length:6}, () => rHex(2))
+                    .join(':');
+            }
+
+            function getTimeStamp() {
+                const now = new Date();
+
+                return `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}.${now.getMilliseconds().toString().padStart(3,'0')}`;
+            }
+
+            function initCanvas(id) {
+                const cvs = document.getElementById(id);
+
+                if(!cvs) return null;
+
+                const rect = cvs.getBoundingClientRect();
+
+                cvs.width =
+                    rect.width * (window.devicePixelRatio || 1);
+
+                cvs.height =
+                    rect.height * (window.devicePixelRatio || 1);
+
+                const context = cvs.getContext('2d');
+
+                context.scale(
+                    window.devicePixelRatio || 1,
+                    window.devicePixelRatio || 1
+                );
+
+                return {
+                    cvs,
+                    ctx: context,
+                    w: rect.width,
+                    h: rect.height
+                };
+            }
+
+            window.addEventListener('resize', () => {
+                Object.keys(ctx).forEach(k => {
+                    if(!ctx[k]) return;
+
+                    const rect =
+                        ctx[k].cvs.getBoundingClientRect();
+
+                    ctx[k].cvs.width =
+                        rect.width * (window.devicePixelRatio || 1);
+
+                    ctx[k].cvs.height =
+                        rect.height * (window.devicePixelRatio || 1);
+
+                    ctx[k].ctx.scale(
+                        window.devicePixelRatio || 1,
+                        window.devicePixelRatio || 1
+                    );
+
+                    ctx[k].w = rect.width;
+                    ctx[k].h = rect.height;
                 });
-            } else {
-                backgroundAudioStarted = true;
-            }
-        }
+            });
 
-        function toggleFullscreen() {
+            // BACKGROUND HACKING AUDIO
+            const backgroundAudio =
+                document.getElementById('hacking-bg-audio');
+
+            let backgroundAudioStarted = false;
+
+            function startBackgroundAudio() {
+                if (!backgroundAudio || backgroundAudioStarted) return;
+
+                backgroundAudio.volume = 0.35;
+
+                const playPromise = backgroundAudio.play();
+
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        backgroundAudioStarted = true;
+                    }).catch(() => {
+                        // Browser autoplay policy may require a user interaction.
+                    });
+                } else {
+                    backgroundAudioStarted = true;
+                }
+            }
+
+            function toggleFullscreen() {
+                startBackgroundAudio();
+
+                const elem = document.documentElement;
+
+                if (!document.fullscreenElement) {
+                    if (elem.requestFullscreen)
+                        elem.requestFullscreen();
+
+                    else if (elem.webkitRequestFullscreen)
+                        elem.webkitRequestFullscreen();
+
+                    else if (elem.msRequestFullscreen)
+                        elem.msRequestFullscreen();
+                }
+            }
+
+            function exitFullscreen() {
+                if (document.fullscreenElement) {
+                    if (document.exitFullscreen)
+                        document.exitFullscreen();
+
+                    else if (document.webkitExitFullscreen)
+                        document.webkitExitFullscreen();
+
+                    else if (document.msExitFullscreen)
+                        document.msExitFullscreen();
+                }
+            }
+
+            // Start background audio on the first user interaction.
+            // This also satisfies browser autoplay restrictions when possible.
+            document.addEventListener(
+                'pointerdown',
+                startBackgroundAudio
+            );
+
+            document.addEventListener(
+                'keydown',
+                startBackgroundAudio
+            );
+
+            document.addEventListener('click', (e) => {
+                if (
+                    document.fullscreenElement &&
+                    e.target.tagName !== 'BUTTON' &&
+                    e.target.tagName !== 'TEXTAREA'
+                ) {
+                    e.preventDefault();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (
+                    (e.altKey || e.shiftKey) &&
+                    !e.ctrlKey &&
+                    !e.metaKey
+                ) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        injectCustomText();
+                    }
+
+                    else if (e.key.toLowerCase() === 'c') {
+                        e.preventDefault();
+                        clearCustomText();
+                    }
+
+                    else if (e.key.toLowerCase() === 'p') {
+                        e.preventDefault();
+                        togglePause();
+                    }
+
+                    else if (e.key.toLowerCase() === 's') {
+                        e.preventDefault();
+                        clearTerminal();
+                    }
+                }
+            });
+
+            function createLogLine(text, type = 'INFO') {
+                const div = document.createElement('div');
+
+                div.className = 'log-line';
+
+                div.innerHTML =
+                    `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-${type}">[${type}]</span> ${text}`;
+
+                return div;
+            }
+
+            function appendLog(
+                target,
+                htmlElement,
+                maxLines = 100
+            ) {
+                target.appendChild(htmlElement);
+
+                while (target.childNodes.length > maxLines) {
+                    target.removeChild(target.firstChild);
+                }
+
+                if (target === els.terminal) {
+                    els.terminalContent.scrollTop =
+                        els.terminalContent.scrollHeight;
+                } else {
+                    target.scrollTop =
+                        target.scrollHeight;
+                }
+            }
+
+            function generateRandomLog() {
+                if (isPaused || isTypingCustom) return;
+
+                const type =
+                    logTypes[rand(0, logTypes.length - 1)];
+
+                let msg =
+                    logMessages[rand(0, logMessages.length - 1)];
+
+                const rndData = rand(0,5);
+
+                if(rndData===0)
+                    msg += ` ${rIP()}`;
+
+                if(rndData===1)
+                    msg += ` ${rMAC()}`;
+
+                if(rndData===2)
+                    msg += ` ${rand(1000,9999)}`;
+
+                if(rndData===3)
+                    msg += ` 0x${rHex(8)}`;
+
+                appendLog(
+                    els.terminal,
+                    createLogLine(msg, type),
+                    50
+                );
+
+                if (rand(0,10) > 6) {
+                    const actLine =
+                        document.createElement('div');
+
+                    actLine.textContent =
+                        `> TRK_${rHex(4)}: ${rIP()} : ${rHex(8)} : OK`;
+
+                    appendLog(
+                        els.activity,
+                        actLine,
+                        20
+                    );
+                }
+            }
+
+            function injectCustomText() {
+                const text =
+                    els.customInput.value.trim();
+
+                if (!text) return;
+
+                els.customInput.value = '';
+
+                const lowerText =
+                    text.toLowerCase();
+
+                if (lowerText === 'myip') {
+                    executeApiCommand('myip', text);
+                    return;
+                }
+
+                if (lowerText === 'gps') {
+                    executeApiCommand('gps', text);
+                    return;
+                }
+
+                if (lowerText === 'sysinfo') {
+                    executeApiCommand('sysinfo', text);
+                    return;
+                }
+
+                if (lowerText === 'nuke') {
+                    executeApiCommand('nuke', text);
+                    return;
+                }
+
+                if (lowerText.startsWith('weather ')) {
+                    executeApiCommand('weather', text);
+                    return;
+                }
+
+                if (lowerText.startsWith('qr ')) {
+                    executeApiCommand('qr', text);
+                    return;
+                }
+
+                if (lowerText.startsWith('calc ')) {
+                    executeApiCommand('calc', text);
+                    return;
+                }
+
+                if (lowerText.startsWith('scan ')) {
+                    executeApiCommand('scan', text);
+                    return;
+                }
+
+                if (lowerText.startsWith('crack ')) {
+                    executeApiCommand('crack', text);
+                    return;
+                }
+
+                if (lowerText.startsWith('speak ')) {
+                    executeApiCommand('speak', text);
+                    return;
+                }
+
+                const lines = text.split('\n');
+
+                lines.forEach(line => {
+                    if(line.trim() !== '')
+                        customQueue.push(line);
+                });
+
+                if (!isTypingCustom)
+                    processCustomQueue();
+            }
+
+            async function executeApiCommand(cmd, fullText) {
+                isTypingCustom = true;
+
+                if (cmd !== 'nuke') {
+                    const initDiv =
+                        document.createElement('div');
+
+                    initDiv.className =
+                        'log-line custom-highlight';
+
+                    initDiv.style.borderLeftColor =
+                        'var(--neon)';
+
+                    initDiv.style.background =
+                        'transparent';
+
+                    initDiv.innerHTML =
+                        `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[SYS_API]</span> INITIATING MODULE: ${cmd.toUpperCase()}...`;
+
+                    appendLog(
+                        els.terminal,
+                        initDiv,
+                        50
+                    );
+                }
+
+                try {
+
+                    if (cmd === 'speak') {
+                        const msgToSpeak =
+                            fullText.substring(6).trim();
+
+                        if(!msgToSpeak)
+                            throw new Error(
+                                "Message empty. Syntax: speak [text]"
+                            );
+
+                        robotSpeak(msgToSpeak);
+
+                        showCommandResult(
+                            `AUDIO_OUTPUT: Transmitting voice data...<br>CONTENT: "${msgToSpeak}"`
+                        );
+                    }
+
+                    else if (cmd === 'scan') {
+                        const target =
+                            fullText.substring(5).trim();
+
+                        if(!target)
+                            throw new Error(
+                                "Target empty. Syntax: scan [ip/url]"
+                            );
+
+                        const scanDiv =
+                            document.createElement('div');
+
+                        scanDiv.className =
+                            `log-line custom-highlight api-result`;
+
+                        scanDiv.innerHTML =
+                            `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-SUCC">[PORT_SCANNER]</span> TARGET: ${target}<br><div class="scan-content" style="margin-top:5px; line-height: 1.6; font-family:monospace;"></div>`;
+
+                        appendLog(
+                            els.terminal,
+                            scanDiv,
+                            50
+                        );
+
+                        const scanContent =
+                            scanDiv.querySelector('.scan-content');
+
+                        const ports = [
+                            21,
+                            22,
+                            53,
+                            80,
+                            443,
+                            3306,
+                            8080
+                        ];
+
+                        let pIdx = 0;
+
+                        await new Promise(resolve => {
+                            const intv =
+                                setInterval(() => {
+
+                                    if(pIdx < ports.length) {
+
+                                        scanContent.innerHTML +=
+                                            `> Checking Port ${ports[pIdx]}... <span style="color:#00FF66; text-shadow:0 0 5px #00FF66;">[OPEN]</span><br>`;
+
+                                        els.terminalContent.scrollTop =
+                                            els.terminalContent.scrollHeight;
+
+                                        pIdx++;
+
+                                    } else {
+
+                                        scanContent.innerHTML +=
+                                            `<br><span style="color:#FFA500; font-weight:bold;">> FIREWALL BYPASSED. ROOT VULNERABILITY FOUND.</span>`;
+
+                                        els.terminalContent.scrollTop =
+                                            els.terminalContent.scrollHeight;
+
+                                        clearInterval(intv);
+                                        resolve();
+                                    }
+
+                                }, 400);
+                        });
+                    }
+
+                    else if (cmd === 'crack') {
+                        const target =
+                            fullText.substring(6).trim();
+
+                        if(!target)
+                            throw new Error(
+                                "Target empty. Syntax: crack [username/wifi]"
+                            );
+
+                        const crackDiv =
+                            document.createElement('div');
+
+                        crackDiv.className =
+                            `log-line custom-highlight api-result`;
+
+                        crackDiv.innerHTML =
+                            `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[BRUTE-FORCE]</span> TARGET: ${target}<br><div class="crack-content" style="margin-top:5px; font-family:monospace; word-break:break-all; color:#FFA500;"></div>`;
+
+                        appendLog(
+                            els.terminal,
+                            crackDiv,
+                            50
+                        );
+
+                        const crackContent =
+                            crackDiv.querySelector('.crack-content');
+
+                        const chars =
+                            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+{}|:<>?';
+
+                        let ticks = 0;
+
+                        await new Promise(resolve => {
+                            const intv =
+                                setInterval(() => {
+
+                                    let rnd = '';
+
+                                    for(let i=0; i<45; i++)
+                                        rnd += chars.charAt(
+                                            Math.floor(
+                                                Math.random() * chars.length
+                                            )
+                                        );
+
+                                    crackContent.innerText =
+                                        `Attempting Hashes: \n${rnd}`;
+
+                                    ticks++;
+
+                                    if(ticks > 30) {
+
+                                        const pass =
+                                            "ADMIN_" +
+                                            Math.floor(
+                                                Math.random() * 9999
+                                            ) +
+                                            "!";
+
+                                        crackContent.innerHTML =
+                                            `<br><span style="color:#00FF66; font-size:18px; text-shadow:0 0 10px #00FF66;">[PASSWORD CRACKED]: ${pass}</span>`;
+
+                                        els.terminalContent.scrollTop =
+                                            els.terminalContent.scrollHeight;
+
+                                        clearInterval(intv);
+                                        resolve();
+                                    }
+
+                                }, 80);
+                        });
+                    }
+
+                    else if (cmd === 'sysinfo') {
+
+                        const cores =
+                            navigator.hardwareConcurrency ||
+                            'Unknown';
+
+                        const ram =
+                            navigator.deviceMemory ||
+                            'Unknown';
+
+                        const platform =
+                            navigator.platform ||
+                            'Unknown';
+
+                        const vendor =
+                            navigator.vendor ||
+                            'Unknown';
+
+                        const ua =
+                            navigator.userAgent;
+
+                        const screen =
+                            `${window.screen.width}x${window.screen.height}`;
+
+                        const lang =
+                            navigator.language;
+
+                        let connInfo = 'Unknown';
+
+                        if (navigator.connection) {
+                            connInfo =
+                                `${navigator.connection.effectiveType.toUpperCase()} (Downlink: ${navigator.connection.downlink}Mbps)`;
+                        }
+
+                        const infoHtml = `
+                            <span style="color:#FFA500;">> OS_PLATFORM:</span> ${platform} [${vendor}]<br>
+                            <span style="color:#FFA500;">> CPU_CORES:</span> ${cores}<br>
+                            <span style="color:#FFA500;">> EST_MEMORY:</span> ${ram} GB<br>
+                            <span style="color:#FFA500;">> DISPLAY_RES:</span> ${screen}<br>
+                            <span style="color:#FFA500;">> SYS_LANG:</span> ${lang}<br>
+                            <span style="color:#FFA500;">> NET_TYPE:</span> ${connInfo}<br>
+                            <span style="color:#FFA500;">> USER_AGENT:</span> <span style="font-size:10px;">${ua}</span>
+                        `;
+
+                        showCommandResult(
+                            `[SYSTEM DIAGNOSTIC COMPLETE]<br><br>${infoHtml}`
+                        );
+                    }
+
+                    else if (cmd === 'nuke') {
+
+                        document.documentElement.style.setProperty(
+                            '--neon',
+                            '#FF0033'
+                        );
+
+                        document.documentElement.style.setProperty(
+                            '--neon-dim',
+                            'rgba(255, 0, 51, 0.3)'
+                        );
+
+                        document.documentElement.style.setProperty(
+                            '--neon-glow',
+                            'rgba(255, 0, 51, 0.7)'
+                        );
+
+                        const overlay =
+                            document.createElement('div');
+
+                        overlay.style.cssText =
+                            "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(50,0,0,0.5);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FF0033;text-shadow:0 0 20px #FF0033;font-family:monospace;backdrop-filter:blur(3px);";
+
+                        document.body.appendChild(overlay);
+
+                        let c = 10;
+
+                        await new Promise(resolve => {
+
+                            const countIntv =
+                                setInterval(() => {
+
+                                    if (c > 0) {
+
+                                        overlay.innerHTML =
+                                            `<h1 style="font-size:8vw;margin:0;animation:blink 0.5s infinite;text-align:center;">SYSTEM BREACHED</h1><h2 style="font-size:15vw;margin:0;">${c}</h2>`;
+
+                                        playKlaxonSiren();
+                                    }
+
+                                    c--;
+
+                                    if(c < 0) {
+
+                                        clearInterval(countIntv);
+
+                                        els.hudContainer.style.display =
+                                            'none';
+
+                                        document.getElementById(
+                                            'control-box'
+                                        ).style.display =
+                                            'none';
+
+                                        playFatalGlitchNoise(15000);
+
+                                        document.body.style.animation =
+                                            "nightmareShake 0.1s infinite";
+
+                                        overlay.style.cssText =
+                                            "position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background-color:#050000;color:#FFF;font-family:'Courier New', monospace;overflow:hidden;animation:extremeStrobe 0.15s infinite;";
+
+                                        const giantSymbol =
+                                            document.createElement('div');
+
+                                        giantSymbol.style.cssText =
+                                            "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:70vw;opacity:0.3;color:#F00;pointer-events:none;mix-blend-mode:screen;line-height:1;transition:all 0.1s;";
+
+                                        overlay.appendChild(
+                                            giantSymbol
+                                        );
+
+                                        const symbols = [
+                                            "☠️",
+                                            "☣️",
+                                            "☢️",
+                                            "👁️",
+                                            "⚠️",
+                                            "❌",
+                                            "🩸",
+                                            "SYSTEM_FAIL",
+                                            "0xDEAD",
+                                            "NO_ESCAPE"
+                                        ];
+
+                                        const chaosText =
+                                            document.createElement('div');
+
+                                        chaosText.style.cssText =
+                                            "position:absolute;top:0;left:0;width:100%;height:100%;font-size:18px;line-height:1.1;word-break:break-all;color:#FF3333;opacity:0.8;font-weight:bold;overflow:hidden;";
+
+                                        overlay.appendChild(
+                                            chaosText
+                                        );
+
+                                        const scaryPhrases = [
+                                            "FATAL ERROR",
+                                            "SYSTEM CORRUPT",
+                                            "MELTDOWN",
+                                            "DATA BREACH",
+                                            "WIPING SECTOR",
+                                            "KERNEL PANIC",
+                                            "HARDWARE FAILURE",
+                                            "0xDEADBEEF",
+                                            "DELETING SYSTEM32"
+                                        ];
+
+                                        let dumpIntv =
+                                            setInterval(() => {
+
+                                                giantSymbol.innerHTML =
+                                                    symbols[
+                                                        Math.floor(
+                                                            Math.random() *
+                                                            symbols.length
+                                                        )
+                                                    ];
+
+                                                giantSymbol.style.transform =
+                                                    `translate(-50%, -50%) scale(${0.8 + Math.random() * 0.7}) rotate(${Math.random() * 40 - 20}deg)`;
+
+                                                let textWall = "";
+
+                                                for(let i=0; i<300; i++)
+                                                    textWall +=
+                                                        scaryPhrases[
+                                                            Math.floor(
+                                                                Math.random() *
+                                                                scaryPhrases.length
+                                                            )
+                                                        ] +
+                                                        " [" +
+                                                        Math.floor(
+                                                            Math.random()*999999
+                                                        )
+                                                        .toString(16)
+                                                        .toUpperCase() +
+                                                        "] ";
+
+                                                let hugeFlash = "";
+
+                                                for(
+                                                    let j=0;
+                                                    j<Math.floor(Math.random()*4)+1;
+                                                    j++
+                                                ) {
+
+                                                    let top =
+                                                        Math.random() * 90;
+
+                                                    let left =
+                                                        Math.random() * 80;
+
+                                                    let size =
+                                                        Math.random() * 10 + 5;
+
+                                                    hugeFlash +=
+                                                        `<div style="position:absolute; top:${top}%; left:${left}%; font-size:${size}vw; color:${Math.random() > 0.5 ? '#FFF' : '#000'}; background:${Math.random() > 0.5 ? '#F00' : 'transparent'}; padding:5px; text-shadow:0 0 20px #F00; font-weight:900; z-index:99;">${scaryPhrases[Math.floor(Math.random() * scaryPhrases.length)]}</div>`;
+                                                }
+
+                                                chaosText.innerHTML =
+                                                    textWall + hugeFlash;
+
+                                            }, 100);
+
+                                        setTimeout(() => {
+
+                                            clearInterval(dumpIntv);
+
+                                            document.body.style.animation =
+                                                "";
+
+                                            overlay.style.animation =
+                                                "";
+
+                                            overlay.style.background =
+                                                "#000";
+
+                                            overlay.innerHTML =
+                                                `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#00FF66;text-shadow:0 0 10px #00FF66;font-size:24px;text-align:center;"><div style="animation:blink 1s infinite;">_</div><br><br>REBOOTING SEC-NET OS...<br>RESTORING KERNEL... OK</div>`;
+
+                                            setTimeout(() => {
+
+                                                overlay.remove();
+
+                                                els.hudContainer.style.display =
+                                                    'grid';
+
+                                                document.getElementById(
+                                                    'control-box'
+                                                ).style.display =
+                                                    'flex';
+
+                                                document.documentElement.style.setProperty(
+                                                    '--neon',
+                                                    '#00FF66'
+                                                );
+
+                                                document.documentElement.style.setProperty(
+                                                    '--neon-dim',
+                                                    'rgba(0, 255, 102, 0.3)'
+                                                );
+
+                                                document.documentElement.style.setProperty(
+                                                    '--neon-glow',
+                                                    'rgba(0, 255, 102, 0.7)'
+                                                );
+
+                                                clearTerminal();
+                                                resolve();
+
+                                            }, 4000);
+
+                                        }, 15000);
+                                    }
+
+                                }, 1000);
+                        });
+                    }
+
+                    else if (cmd === 'myip') {
+
+                        const res =
+                            await fetch(
+                                'https://get.geojs.io/v1/ip/geo.json'
+                            );
+
+                        if(!res.ok)
+                            throw new Error(
+                                "Failed to fetch IP data. Network Blocked."
+                            );
+
+                        const data =
+                            await res.json();
+
+                        let locationStr =
+                            data.city
+                                ? `${data.city}, ${data.region}`
+                                : 'Unknown Location (ISP Routed)';
+
+                        showCommandResult(
+                            `TARGET IP: ${data.ip}<br>NETWORK LOC: ${locationStr}<br>COUNTRY: ${data.country}<br>ISP: ${data.organization}`
+                        );
+                    }
+
+                    else if (cmd === 'gps') {
+
+                        if (!navigator.geolocation)
+                            throw new Error(
+                                "Geolocation is not supported by your browser"
+                            );
+
+                        showCommandResult(
+                            `[SYS_API] REQUESTING SATELLITE GPS FIX... PLEASE ALLOW PERMISSION.`,
+                            false
+                        );
+
+                        const pos =
+                            await new Promise(
+                                (resolve, reject) => {
+                                    navigator.geolocation.getCurrentPosition(
+                                        resolve,
+                                        reject,
+                                        {timeout: 10000}
+                                    );
+                                }
+                            );
+
+                        const lat =
+                            pos.coords.latitude;
+
+                        const lon =
+                            pos.coords.longitude;
+
+                        const geoRes =
+                            await fetch(
+                                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+                            );
+
+                        const geoData =
+                            await geoRes.json();
+
+                        const locName =
+                            geoData.locality ||
+                            geoData.city ||
+                            geoData.principalSubdivision ||
+                            'Unknown';
+
+                        showCommandResult(
+                            `SATELLITE LOCK SECURED<br>LAT: ${lat.toFixed(4)}<br>LON: ${lon.toFixed(4)}<br>EXACT LOCATION: ${locName}, ${geoData.countryName}`
+                        );
+                    }
+
+                    else if (cmd === 'weather') {
+
+                        const city =
+                            fullText.substring(8).trim();
+
+                        if(!city)
+                            throw new Error(
+                                "Location empty. Syntax: weather [city/district]"
+                            );
+
+                        const geoRes =
+                            await fetch(
+                                `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`
+                            );
+
+                        const geoData =
+                            await geoRes.json();
+
+                        if(
+                            !geoData.results ||
+                            geoData.results.length === 0
+                        )
+                            throw new Error(
+                                `Location '${city}' not found.`
+                            );
+
+                        const {
+                            latitude,
+                            longitude,
+                            name,
+                            country
+                        } = geoData.results[0];
+
+                        const wRes =
+                            await fetch(
+                                `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+                            );
+
+                        const wData =
+                            await wRes.json();
+
+                        showCommandResult(
+                            `LOCATION: ${name}, ${country}<br>STATUS: ACTIVE<br>TEMP: ${wData.current_weather.temperature}°C<br>WIND: ${wData.current_weather.windspeed} km/h`
+                        );
+                    }
+
+                    else if (cmd === 'qr') {
+
+                        const link =
+                            fullText.substring(3).trim();
+
+                        if(!link)
+                            throw new Error(
+                                "Link empty. Syntax: qr [url/text]"
+                            );
+
+                        const qrUrl =
+                            `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link)}&color=00FF66&bgcolor=000502`;
+
+                        showCommandResult(
+                            `QR CODE GENERATED FOR: ${link}<br><img src="${qrUrl}" style="margin-top:10px; border:2px solid var(--neon); padding:5px; box-shadow:0 0 15px rgba(0,255,102,0.5);">`
+                        );
+                    }
+
+                    else if (cmd === 'calc') {
+
+                        const expression =
+                            fullText.substring(5).trim();
+
+                        if(!expression)
+                            throw new Error(
+                                "Expression empty. Syntax: calc 4+7"
+                            );
+
+                        const sanitizedExp =
+                            expression.replace(
+                                /[^0-9+\-*/().% ]/g,
+                                ''
+                            );
+
+                        if(
+                            sanitizedExp !==
+                            expression.replace(/\s+/g, '')
+                        )
+                            throw new Error(
+                                "Invalid math characters found."
+                            );
+
+                        const result =
+                            new Function(
+                                'return ' + sanitizedExp
+                            )();
+
+                        if(
+                            result === undefined ||
+                            Number.isNaN(result)
+                        )
+                            throw new Error(
+                                "Invalid calculation"
+                            );
+
+                        showCommandResult(
+                            `OPERATION: ${sanitizedExp}<br>RESULT: <span style="font-size:22px; color:#00FFFF;">${result}</span>`
+                        );
+                    }
+
+                } catch(err) {
+
+                    showCommandResult(
+                        `ERROR: ${err.message}`,
+                        true
+                    );
+                }
+
+                isTypingCustom = false;
+            }
+
+            function showCommandResult(
+                htmlContent,
+                isError = false
+            ) {
+                const resDiv =
+                    document.createElement('div');
+
+                resDiv.className =
+                    `log-line custom-highlight ${
+                        isError
+                            ? 'api-error'
+                            : 'api-result'
+                    }`;
+
+                resDiv.innerHTML =
+                    `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-${isError?'ERR':'SUCC'}">[${isError?'FAILED':'SUCCESS'}]</span> <br><div style="margin-top:5px; line-height: 1.6;">${htmlContent}</div>`;
+
+                appendLog(
+                    els.terminal,
+                    resDiv,
+                    50
+                );
+            }
+
+            function processCustomQueue() {
+
+                if (
+                    customQueue.length === 0 ||
+                    isPaused
+                ) {
+                    isTypingCustom = false;
+                    return;
+                }
+
+                isTypingCustom = true;
+
+                const lineText =
+                    customQueue.shift();
+
+                const lineDiv =
+                    document.createElement('div');
+
+                lineDiv.className =
+                    'log-line custom-highlight';
+
+                lineDiv.innerHTML =
+                    `<span class="log-time">[${getTimeStamp()}]</span> <span class="log-type-WARN">[USR_OVR]</span> <span class="type-target"></span><span class="typing-cursor"></span>`;
+
+                appendLog(
+                    els.terminal,
+                    lineDiv,
+                    50
+                );
+
+                const targetSpan =
+                    lineDiv.querySelector('.type-target');
+
+                const cursor =
+                    lineDiv.querySelector('.typing-cursor');
+
+                let charIdx = 0;
+
+                function typeChar() {
+
+                    if (isPaused) {
+                        setTimeout(
+                            typeChar,
+                            100
+                        );
+                        return;
+                    }
+
+                    if (charIdx < lineText.length) {
+
+                        targetSpan.textContent +=
+                            lineText.charAt(charIdx);
+
+                        charIdx++;
+
+                        els.terminalContent.scrollTop =
+                            els.terminalContent.scrollHeight;
+
+                        setTimeout(
+                            typeChar,
+                            rand(20, 60)
+                        );
+
+                    } else {
+
+                        cursor.remove();
+
+                        setTimeout(
+                            processCustomQueue,
+                            400
+                        );
+                    }
+                }
+
+                typeChar();
+            }
+
+            function clearCustomText() {
+                els.customInput.value = '';
+            }
+
+            function clearTerminal() {
+
+                els.terminal.innerHTML = '';
+                els.activity.innerHTML = '';
+
+                appendLog(
+                    els.terminal,
+                    createLogLine(
+                        "SYSTEM LOGS WIPED",
+                        "WARN"
+                    )
+                );
+            }
+
+            function togglePause() {
+
+                isPaused = !isPaused;
+
+                els.btnPause.textContent =
+                    isPaused
+                        ? 'RESUME'
+                        : 'PAUSE';
+
+                els.btnPause.classList.toggle(
+                    'active',
+                    isPaused
+                );
+            }
+
+            function initDOM() {
+
+                els.statGauges.innerHTML =
+                    stats.map(s => `
+                        <div class="stat-row">
+                            <div class="stat-label">${s.id}</div>
+                            <div class="stat-bar-container">
+                                <div
+                                    class="stat-bar"
+                                    id="bar-${s.id}"
+                                ></div>
+                            </div>
+                            <div
+                                class="stat-val"
+                                id="val-${s.id}"
+                            >0%</div>
+                        </div>
+                    `).join('');
+            }
+
+            function updateDOMStats() {
+
+                if(isPaused) return;
+
+                stats.forEach(s => {
+
+                    s.val += randFloat(-5, 5);
+
+                    if (s.val > 100)
+                        s.val = 100;
+
+                    if (s.val < 0)
+                        s.val = 0;
+
+                    document.getElementById(
+                        `bar-${s.id}`
+                    ).style.width =
+                        `${s.val}%`;
+
+                    document.getElementById(
+                        `val-${s.id}`
+                    ).textContent =
+                        `${s.val.toFixed(1)}%`;
+                });
+
+                let liveHTML = '';
+
+                liveMetrics.forEach(m => {
+
+                    const val =
+                        (m === 'PING' ||
+                         m === 'FPS' ||
+                         m === 'TEMP')
+                            ? rand(20, 99)
+                            : (m === 'FIREWALL')
+                                ? 'ACTIVE'
+                                : rHex(4);
+
+                    liveHTML +=
+                        `<div style="display:flex; justify-content:space-between;"><span>${m}</span><span>${val}</span></div>`;
+                });
+
+                els.liveData.innerHTML =
+                    liveHTML;
+
+                let hexLines = '';
+
+                for(let i=0; i<8; i++)
+                    hexLines +=
+                        `0x${rHex(4)}  ${rHex(4)} ${rHex(4)} ${rHex(4)} ${rHex(4)}<br>`;
+
+                els.hexDump.innerHTML =
+                    hexLines;
+
+                if(rand(0,100) > 95) {
+
+                    const threats = [
+                        'LOW',
+                        'MEDIUM',
+                        'HIGH',
+                        'CRITICAL'
+                    ];
+
+                    const t =
+                        threats[rand(0,3)];
+
+                    els.threat.textContent =
+                        `THREAT: ${t}`;
+
+                    els.threat.style.color =
+                        (
+                            t === 'CRITICAL' ||
+                            t === 'HIGH'
+                        )
+                            ? '#FF0033'
+                            : 'var(--neon)';
+                }
+
+                els.clock.textContent =
+                    new Date().toLocaleTimeString();
+            }
+
+            let time = 0;
+
+            function drawRadar(c) {
+
+                if(!c) return;
+
+                const {
+                    ctx,
+                    w,
+                    h
+                } = c;
+
+                const cx = w/2;
+                const cy = h/2;
+
+                const r =
+                    Math.min(w,h)/2 - 5;
+
+                ctx.fillStyle =
+                    'rgba(0, 5, 2, 0.1)';
+
+                ctx.fillRect(
+                    0,
+                    0,
+                    w,
+                    h
+                );
+
+                ctx.strokeStyle =
+                    'rgba(0, 255, 102, 0.3)';
+
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+
+                for(let i=1; i<=4; i++)
+                    ctx.arc(
+                        cx,
+                        cy,
+                        r*(i/4),
+                        0,
+                        Math.PI*2
+                    );
+
+                ctx.moveTo(cx, 0);
+                ctx.lineTo(cx, h);
+
+                ctx.moveTo(0, cy);
+                ctx.lineTo(w, cy);
+
+                ctx.stroke();
+
+                const angle =
+                    time * 2;
+
+                ctx.save();
+
+                ctx.translate(
+                    cx,
+                    cy
+                );
+
+                ctx.rotate(angle);
+
+                ctx.beginPath();
+
+                ctx.moveTo(0,0);
+
+                ctx.arc(
+                    0,
+                    0,
+                    r,
+                    0,
+                    0.2
+                );
+
+                ctx.lineTo(0,0);
+
+                ctx.fillStyle =
+                    'rgba(0, 255, 102, 0.5)';
+
+                ctx.fill();
+
+                ctx.restore();
+
+                if(rand(0,10) > 8) {
+
+                    const bx =
+                        cx +
+                        Math.cos(
+                            randFloat(
+                                0,
+                                Math.PI*2
+                            )
+                        ) *
+                        randFloat(0, r);
+
+                    const by =
+                        cy +
+                        Math.sin(
+                            randFloat(
+                                0,
+                                Math.PI*2
+                            )
+                        ) *
+                        randFloat(0, r);
+
+                    ctx.fillStyle =
+                        '#00FF66';
+
+                    ctx.beginPath();
+
+                    ctx.arc(
+                        bx,
+                        by,
+                        3,
+                        0,
+                        Math.PI*2
+                    );
+
+                    ctx.fill();
+                }
+            }
+
+            function drawWaveform(
+                c,
+                freq,
+                amp,
+                speed,
+                offset
+            ) {
+
+                if(!c) return;
+
+                const {
+                    ctx,
+                    w,
+                    h
+                } = c;
+
+                ctx.clearRect(
+                    0,
+                    0,
+                    w,
+                    h
+                );
+
+                ctx.strokeStyle =
+                    '#00FF66';
+
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath();
+
+                const mid = h/2;
+
+                for(let x=0; x<w; x+=2) {
+
+                    let y =
+                        Math.sin(
+                            x * freq +
+                            time * speed +
+                            offset
+                        ) *
+                        amp;
+
+                    y +=
+                        Math.sin(
+                            x * freq*2 +
+                            time * speed*1.5
+                        ) *
+                        (amp/2);
+
+                    y +=
+                        (Math.random()-0.5) * 5;
+
+                    if(x===0)
+                        ctx.moveTo(
+                            x,
+                            mid + y
+                        );
+                    else
+                        ctx.lineTo(
+                            x,
+                            mid + y
+                        );
+                }
+
+                ctx.stroke();
+            }
+
+            function drawFan(
+                c,
+                offset
+            ) {
+
+                if(!c) return;
+
+                const {
+                    ctx,
+                    w,
+                    h
+                } = c;
+
+                const cx = w/2;
+                const cy = h/2;
+
+                const r =
+                    Math.min(w,h)/2 - 2;
+
+                ctx.clearRect(
+                    0,
+                    0,
+                    w,
+                    h
+                );
+
+                ctx.save();
+
+                ctx.translate(
+                    cx,
+                    cy
+                );
+
+                ctx.rotate(
+                    time * 3 + offset
+                );
+
+                ctx.strokeStyle =
+                    '#00FF66';
+
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    0,
+                    0,
+                    r,
+                    0,
+                    Math.PI*2
+                );
+
+                ctx.stroke();
+
+                ctx.fillStyle =
+                    'rgba(0, 255, 102, 0.2)';
+
+                for(let i=0; i<3; i++) {
+
+                    ctx.beginPath();
+
+                    ctx.moveTo(
+                        0,
+                        0
+                    );
+
+                    ctx.arc(
+                        0,
+                        0,
+                        r,
+                        i*(Math.PI*2/3),
+                        i*(Math.PI*2/3) + Math.PI/3
+                    );
+
+                    ctx.lineTo(
+                        0,
+                        0
+                    );
+
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    0,
+                    0,
+                    r/4,
+                    0,
+                    Math.PI*2
+                );
+
+                ctx.fillStyle =
+                    '#00FF66';
+
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            function drawHeaderWave(c) {
+
+                if(!c) return;
+
+                const {
+                    ctx,
+                    w,
+                    h
+                } = c;
+
+                ctx.clearRect(
+                    0,
+                    0,
+                    w,
+                    h
+                );
+
+                ctx.fillStyle =
+                    '#00FF66';
+
+                const bars = 20;
+
+                const bw =
+                    w/bars - 2;
+
+                for(let i=0; i<bars; i++) {
+
+                    const bh =
+                        (
+                            Math.sin(
+                                time*5 +
+                                i*0.5
+                            ) *
+                            0.5 +
+                            0.5
+                        ) *
+                        h;
+
+                    ctx.fillRect(
+                        i*(bw+2),
+                        h-bh,
+                        bw,
+                        bh
+                    );
+                }
+            }
+
+            let lastLogTime = 0;
+            let lastStatTime = 0;
+
+            function loop(timestamp) {
+
+                if(!isPaused) {
+
+                    time += 0.02;
+
+                    drawRadar(
+                        ctx.radar
+                    );
+
+                    drawWaveform(
+                        ctx.wave1,
+                        0.02,
+                        ctx.wave1?.h/4 || 20,
+                        2,
+                        0
+                    );
+
+                    drawWaveform(
+                        ctx.wave2,
+                        0.05,
+                        ctx.wave2?.h/3 || 30,
+                        -3,
+                        Math.PI
+                    );
+
+                    drawFan(
+                        ctx.fan1,
+                        0
+                    );
+
+                    drawFan(
+                        ctx.fan2,
+                        Math.PI
+                    );
+
+                    drawHeaderWave(
+                        ctx.headerWave
+                    );
+
+                    if (
+                        timestamp -
+                        lastLogTime >
+                        150
+                    ) {
+                        generateRandomLog();
+                        lastLogTime =
+                            timestamp;
+                    }
+
+                    if (
+                        timestamp -
+                        lastStatTime >
+                        1000
+                    ) {
+                        updateDOMStats();
+                        lastStatTime =
+                            timestamp;
+                    }
+                }
+
+                requestAnimationFrame(
+                    loop
+                );
+            }
+
+            initDOM();
+            updateDOMStats();
             startBackgroundAudio();
+            requestAnimationFrame(loop);
 
-            const elem = document.documentElement;
+            return {
+                toggleFullscreen,
+                exitFullscreen,
+                injectCustomText,
+                clearCustomText,
+                clearTerminal,
+                togglePause
+            };
 
-            if (!document.fullscreenElement) {
-                if (elem.requestFullscreen) elem.requestFullscreen();
-                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-                else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
-            }
-        }
-
-        // Start audio after the first user interaction if autoplay is blocked.
-        document.addEventListener('pointerdown', startBackgroundAudio);
-        document.addEventListener('keydown', startBackgroundAudio);
-
-        // Try autoplay when the page loads.
-        startBackgroundAudio();
-
+        })();
     </script>
 
 </body>
