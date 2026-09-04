@@ -147,20 +147,20 @@
             z-index: 1;
             overflow: hidden;
             pointer-events: none;
-            background: rgba(0, 5, 2, 0.16);
+            background: rgba(0, 5, 2, 0.06);
         }
 
         #terminal-logo-bg .logo-layer {
             position: absolute;
-            width: min(58%, 430px);
+            width: min(86%, 720px);
             height: auto;
             left: 50%;
             top: 50%;
             object-fit: contain;
             pointer-events: none;
             user-select: none;
-            filter: brightness(0.22) contrast(1.25) grayscale(0.15)
-                    drop-shadow(0 0 18px rgba(0, 255, 102, 0.20));
+            filter: brightness(0.48) contrast(1.55) grayscale(0.05)
+                    drop-shadow(0 0 22px rgba(0, 255, 102, 0.28));
             opacity: 0;
             transform: translate(-50%, -50%) scale(0.72) rotate(-8deg);
             mix-blend-mode: screen;
@@ -172,14 +172,14 @@
 
         #terminal-logo-bg .logo-layer:nth-child(2) {
             animation: terminalLogoSweep 12s ease-in-out infinite 2.5s;
-            filter: brightness(0.15) contrast(1.4) grayscale(0.2)
-                    drop-shadow(0 0 25px rgba(0, 255, 102, 0.16));
+            filter: brightness(0.34) contrast(1.60) grayscale(0.10)
+                    drop-shadow(0 0 28px rgba(0, 255, 102, 0.22));
         }
 
         #terminal-logo-bg .logo-layer:nth-child(3) {
             animation: terminalLogoGlitch 10s steps(1, end) infinite 5s;
-            filter: brightness(0.12) contrast(1.5) grayscale(0.3)
-                    drop-shadow(0 0 30px rgba(0, 255, 102, 0.12));
+            filter: brightness(0.28) contrast(1.70) grayscale(0.12)
+                    drop-shadow(0 0 32px rgba(0, 255, 102, 0.20));
         }
 
         #center-panel > .panel-header,
