@@ -508,15 +508,10 @@
     </style>
 </head>
 <body>
-        <!-- BACKGROUND HACKING AUDIO -->
-    <audio id="hacking-bg-audio" loop preload="auto">
+
+    <!-- BACKGROUND HACKING AUDIO -->
+    <audio id="hacking-bg-audio" loop preload="auto" playsinline>
         <source src="./hacking-bg.mp3" type="audio/mpeg">
-    </audio>
-
-
-    <!-- সাউন্ড সিস্টেম যোগ করা হয়েছে (এটি এখানে থাকলেই চলবে) -->
-    <audio id="bg-sound" loop>
-        <source src="https://actions.google.com/sounds/v1/ambiences/computer_room_noise.ogg" type="audio/ogg">
     </audio>
 
     <!-- OVERLAYS -->
@@ -672,12 +667,6 @@
 
     <!-- MAIN JAVASCRIPT -->
     <script>
-        // সাউন্ড অটো-প্লে করার জন্য ছোট্ট লজিক
-        document.body.addEventListener('click', function() {
-            const audio = document.getElementById('bg-sound');
-            audio.play();
-        }, { once: true });
-
         const sys = (function() {
             // State
             let isPaused = false;
@@ -738,6 +727,7 @@
                 const voices = window.speechSynthesis.getVoices();
 
                 if (isBengali) {
+                    // Try to find a high-quality Bengali voice if available
                     const bnVoice = voices.find(v => v.lang.includes('bn-BD')) || 
                                     voices.find(v => v.lang.includes('bn-IN')) ||
                                     voices.find(v => v.lang.startsWith('bn'));
@@ -750,6 +740,7 @@
                 window.speechSynthesis.speak(msg);
             }
 
+            // Loud Klaxon Siren (For Countdown)
             function playKlaxonSiren() {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -768,6 +759,7 @@
                 } catch(e) {}
             }
 
+            // Fatal Glitch Noise Generator
             function playFatalGlitchNoise(durationMs) {
                 try {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -812,8 +804,7 @@
                 context.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
                 return { cvs, ctx: context, w: rect.width, h: rect.height };
             }
-function toggleFullscreen() {
-    const elem = document.documentElement;
+
             window.addEventListener('resize', () => {
                 Object.keys(ctx).forEach(k => {
                     if(!ctx[k]) return;
@@ -826,7 +817,30 @@ function toggleFullscreen() {
                 });
             });
 
+            // BACKGROUND HACKING AUDIO
+            const backgroundAudio = document.getElementById('hacking-bg-audio');
+            let backgroundAudioStarted = false;
+
+            function startBackgroundAudio() {
+                if (!backgroundAudio || backgroundAudioStarted) return;
+
+                backgroundAudio.volume = 0.35;
+
+                const playPromise = backgroundAudio.play();
+
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        backgroundAudioStarted = true;
+                    }).catch(() => {
+                        // Browser autoplay policy may require a user interaction.
+                    });
+                } else {
+                    backgroundAudioStarted = true;
+                }
+            }
+
             function toggleFullscreen() {
+                startBackgroundAudio();
                 const elem = document.documentElement;
                 if (!document.fullscreenElement) {
                     if (elem.requestFullscreen) elem.requestFullscreen();
@@ -842,6 +856,11 @@ function toggleFullscreen() {
                     else if (document.msExitFullscreen) document.msExitFullscreen();
                 }
             }
+
+            // Start background audio on the first user interaction.
+            // This also satisfies browser autoplay restrictions when possible.
+            document.addEventListener('pointerdown', startBackgroundAudio);
+            document.addEventListener('keydown', startBackgroundAudio);
 
             document.addEventListener('click', (e) => {
                 if (document.fullscreenElement && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'TEXTAREA') {
@@ -1277,7 +1296,9 @@ function toggleFullscreen() {
                 requestAnimationFrame(loop);
             }
 
-            initDOM(); updateDOMStats(); requestAnimationFrame(loop);
+            initDOM(); updateDOMStats();
+            startBackgroundAudio();
+            requestAnimationFrame(loop);
 
             return { toggleFullscreen, exitFullscreen, injectCustomText, clearCustomText, clearTerminal, togglePause };
         })();
